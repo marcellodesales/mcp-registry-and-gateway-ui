@@ -1,0 +1,22 @@
+[
+  {
+    "Server Name": "Cost Explorer Service",
+    "path": "/costexplorer",
+    "description": "Provides endpoints for analyzing cloud cost data and generating reports."
+  },
+  {
+    "Server Name": "Current Time API",
+    "path": "/currenttime",
+    "description": "A simple API that returns the current server time in various formats."
+  },
+  {
+    "Server Name": "Financial Info Proxy",
+    "path": "/fininfo",
+    "description": "Secure gateway proxy for internal financial information systems."
+  },
+  {
+    "Server Name": "Legacy Billing API (Disabled)",
+    "path": "/legacy/billing",
+    "description": "Older billing API, currently disabled pending migration."
+  }
+] 

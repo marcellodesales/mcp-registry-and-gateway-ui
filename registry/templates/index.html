@@ -45,12 +45,12 @@
             <div class="controls-area search-controls">
                 <!-- Search Form -->
                 <form action="/" method="get" class="search-bar">
-                    <input type="search" name="query" placeholder="Search by name..." value="{{ request.query_params.get('query', '') }}">
+                    <input type="search" name="query" placeholder="Search by name or description..." value="{{ request.query_params.get('query', '') }}">
                     <button type="submit">Search</button>
                 </form>
                 <!-- Rescan Form -->
                 <form action="/rescan" method="post" class="rescan-form">
-                    <button type="submit">Rescan Test Config</button>
+                    <button type="submit">Rescan Config</button>
                 </form>
             </div>
 
@@ -65,16 +65,16 @@
                             <span class="icons">☁️ 💻 🔄</span>
                         </div>
                         <div class="card-body">
-                            <p class="owner">Owner/Path: {{ service.path }}</p>
+                            <p class="owner">Path: {{ service.path }}</p>
                             <div class="badges">
                                 <span class="badge security">A security</span>
                                 <span class="badge license">A license</span>
                                 <span class="badge quality">A quality</span>
                             </div>
                             <p class="description">
-                                Placeholder description for {{ service.display_name }}. Manage state below.
+                                {{ service.description | default('No description provided.') }}
                             </p>
-                            <form action="/toggle/{{ service.display_name }}" method="post" class="toggle-form">
+                            <form action="/toggle{{ service.path }}" method="post" class="toggle-form">
                                 <label class="switch">
                                     <input type="checkbox" name="enabled" value="on" {% if service.is_enabled %}checked{% endif %} onchange="this.form.submit()">
                                     <span class="slider round"></span>
@@ -95,7 +95,7 @@
                     </div>
                     {% endfor %}
                 {% else %}
-                    <p>No services found matching your query, or none discovered. Try rescanning.</p>
+                    <p>No services found matching your query, or none registered. Try rescanning.</p>
                 {% endif %}
             </div> <!-- end card-container -->
 
