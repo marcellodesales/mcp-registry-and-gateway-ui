@@ -1,0 +1,6 @@
+fastapi
+uvicorn[standard]
+jinja2
+python-multipart
+python-dotenv # For optional auth credentials
+itsdangerous  # For signed session cookies 
