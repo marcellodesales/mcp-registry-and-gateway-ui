@@ -1,5 +1,10 @@
 {
   "server_name": "Cost Explorer Service",
   "description": "Provides endpoints for analyzing cloud cost data and generating reports.",
-  "path": "/costexplorer"
+  "path": "/costexplorer",
+  "tags": [],
+  "num_tools": 444,
+  "num_stars": 0,
+  "is_python": false,
+  "license": "N/A"
 }

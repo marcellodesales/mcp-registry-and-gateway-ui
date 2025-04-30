@@ -1,5 +1,10 @@
 {
   "server_name": "Current Time API",
   "description": "A simple API that returns the current server time in various formats.",
-  "path": "/currenttime"
+  "path": "/currenttime",
+  "tags": [],
+  "num_tools": 0,
+  "num_stars": 0,
+  "is_python": false,
+  "license": "N/A"
 }

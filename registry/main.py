@@ -103,7 +103,14 @@ def load_registered_servers_and_state():
                     if server_path in temp_servers:
                         print(f"Warning: Duplicate server path found in {server_file}: {server_path}. Overwriting previous definition.")
                     
+                    # Add new fields with defaults
                     server_info["description"] = server_info.get("description", "")
+                    server_info["tags"] = server_info.get("tags", [])
+                    server_info["num_tools"] = server_info.get("num_tools", 0)
+                    server_info["num_stars"] = server_info.get("num_stars", 0)
+                    server_info["is_python"] = server_info.get("is_python", False)
+                    server_info["license"] = server_info.get("license", "N/A")
+
                     temp_servers[server_path] = server_info
                 else:
                     print(f"Warning: Invalid server entry format found in {server_file}. Skipping.")
@@ -226,17 +233,21 @@ async def read_root(request: Request, username: Annotated[str, Depends(get_curre
     for path in sorted_server_paths:
         server_info = REGISTERED_SERVERS[path]
         server_name = server_info["server_name"]
-        if not search_query or search_query in server_name.lower() or search_query in server_info["description"].lower():
+        # Include description and tags in search
+        searchable_text = f"{server_name.lower()} {server_info.get('description', '').lower()} {' '.join(server_info.get('tags', []))}"
+        if not search_query or search_query in searchable_text:
+            # Pass all required fields to the template
             service_data.append({
                 "display_name": server_name,
                 "path": path,
-                "description": server_info["description"],
-                "is_enabled": MOCK_SERVICE_STATE.get(path, False)
+                "description": server_info.get("description", ""),
+                "is_enabled": MOCK_SERVICE_STATE.get(path, False),
+                "tags": server_info.get("tags", []),
+                "num_tools": server_info.get("num_tools", 0),
+                "num_stars": server_info.get("num_stars", 0),
+                "is_python": server_info.get("is_python", False),
+                "license": server_info.get("license", "N/A")
             })
-    # --- DEBUG: Print data being sent to template ---
-    print("\n--- Data for Template ---")
-    print(service_data)
-    print("-------------------------\n")
     # --- End Debug ---
     return templates.TemplateResponse(
         "index.html",
@@ -262,22 +273,16 @@ async def toggle_service_route(
     redirect_url = f"/?query={query_param}" if query_param else "/"
     return RedirectResponse(url=redirect_url, status_code=status.HTTP_303_SEE_OTHER)
 
-@app.post("/rescan")
-async def rescan_services_route(
-    request: Request,
-    username: Annotated[str, Depends(get_current_user)] = None
-):
-    print(f"Rescan triggered by user '{username}'...")
-    load_registered_servers_and_state()
-    query_param = request.query_params.get('query', '')
-    redirect_url = f"/?query={query_param}" if query_param else "/"
-    return RedirectResponse(url=redirect_url, status_code=status.HTTP_303_SEE_OTHER)
-
 @app.post("/register")
 async def register_service(
     name: Annotated[str, Form()],
     description: Annotated[str, Form()],
     path: Annotated[str, Form()],
+    tags: Annotated[str, Form()] = "", # Receive tags as comma-separated string
+    num_tools: Annotated[int, Form()] = 0,
+    num_stars: Annotated[int, Form()] = 0,
+    is_python: Annotated[bool, Form()] = False,
+    license_str: Annotated[str, Form(alias="license")] = "N/A", # Use alias for license
     username: Annotated[str, Depends(api_auth)] = None
 ):
     # Ensure path starts with a slash
@@ -291,11 +296,19 @@ async def register_service(
             content={"error": f"Service with path '{path}' already exists"}
         )
     
-    # Create new server entry
+    # Process tags: split string, strip whitespace, filter empty
+    tag_list = [tag.strip() for tag in tags.split(',') if tag.strip()]
+    
+    # Create new server entry with all fields
     server_entry = {
         "server_name": name,
         "description": description,
-        "path": path
+        "path": path,
+        "tags": tag_list,
+        "num_tools": num_tools,
+        "num_stars": num_stars,
+        "is_python": is_python,
+        "license": license_str
     }
     
     # Save to individual file

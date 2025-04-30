@@ -1,5 +1,10 @@
 {
   "server_name": "Test Service",
   "description": "This is a test service",
-  "path": "/test-service"
+  "path": "/test-service",
+  "tags": [],
+  "num_tools": 59,
+  "num_stars": 0,
+  "is_python": false,
+  "license": "N/A"
 }

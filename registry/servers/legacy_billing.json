@@ -1,5 +1,10 @@
 {
   "server_name": "Legacy Billing API (Disabled)",
   "description": "Older billing API, currently disabled pending migration.",
-  "path": "/legacy/billing"
+  "path": "/legacy/billing",
+  "tags": [],
+  "num_tools": 0,
+  "num_stars": 0,
+  "is_python": false,
+  "license": "N/A"
 }

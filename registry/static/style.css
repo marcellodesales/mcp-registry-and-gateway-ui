@@ -267,20 +267,19 @@ main.content {
 }
 
 .badges {
-    margin-bottom: 10px;
+    margin-bottom: 10px; /* Add some space below badges */
 }
 
 .badge {
-    display: inline-block;
-    font-size: 0.8em;
-    padding: 3px 8px;
-    border-radius: 10px;
-    margin-right: 5px;
-    color: #121820; /* Dark text on badge */
-}
-
-.badge.security, .badge.license, .badge.quality {
-    background-color: #50e3c2; /* Greenish badge color */
+    /* Original might be missing or have unsuitable color */
+    display: inline-block; /* Allow padding and margin */
+    padding: 3px 8px; /* Add some padding */
+    font-size: 0.8em; /* Slightly smaller text */
+    background-color: #444; /* Lighter grey background for more contrast */
+    color: #cdd3dc; /* Use the main light text color */
+    border-radius: 4px; /* Rounded corners */
+    margin-right: 5px; /* Space between badges */
+    margin-bottom: 5px; /* Space if badges wrap */
 }
 
 .description {

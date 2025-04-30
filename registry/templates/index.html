@@ -48,10 +48,6 @@
                     <input type="search" name="query" placeholder="Search by name or description..." value="{{ request.query_params.get('query', '') }}">
                     <button type="submit">Search</button>
                 </form>
-                <!-- Rescan Form -->
-                <form action="/rescan" method="post" class="rescan-form">
-                    <button type="submit">Rescan Config</button>
-                </form>
             </div>
 
              <!-- Service Cards Section -->
@@ -67,9 +63,9 @@
                         <div class="card-body">
                             <p class="owner">Path: {{ service.path }}</p>
                             <div class="badges">
-                                <span class="badge security">A security</span>
-                                <span class="badge license">A license</span>
-                                <span class="badge quality">A quality</span>
+                                {% for tag in service.tags %}
+                                <span class="badge">{{ tag }}</span>
+                                {% endfor %}
                             </div>
                             <p class="description">
                                 {{ service.description | default('No description provided.') }}
@@ -84,11 +80,12 @@
                         </div>
                         <div class="card-footer">
                             <span class="metadata">🕒 Last updated: Just now (Simulated)</span>
-                            <span class="metadata">🔧 16</span>
-                            <span class="metadata">⭐ 134</span>
+                            <span class="metadata">🔧 {{ service.num_tools }}</span>
+                            <span class="metadata">⭐ {{ service.num_stars }}</span>
                             <div class="platform-icons">
-                                 <span>🐍 Python</span>
-                                 <span>⚖️ Apache 2.0</span>
+                                 {% if service.is_python %}<span>🐍 Python</span>{% endif %}
+                                 <span>⚖️ {{ service.license }}</span>
+                                 <!-- Consider adding OS icons dynamically if needed -->
                                  <span>🐧</span> <span></span> <span>🪟</span>
                             </div>
                         </div>

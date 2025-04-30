@@ -1,5 +1,10 @@
 {
   "server_name": "Financial Info Proxy",
   "description": "Secure gateway proxy for internal financial information systems.",
-  "path": "/fininfo"
+  "path": "/fininfo",
+  "tags": [],
+  "num_tools": 0,
+  "num_stars": 0,
+  "is_python": false,
+  "license": "N/A"
 }
