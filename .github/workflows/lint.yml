@@ -27,9 +27,9 @@ jobs:
 
       - name: Install dependencies including Ruff using uv
         run: |
-          uv pip install ruff
+          uv pip install --system ruff
           # Install project dependencies if needed for Ruff checks (optional, depends on your Ruff config)
-          # uv pip install -e .
+          # uv pip install --system -e .
 
       - name: Run Ruff linter
         run: ruff check .
