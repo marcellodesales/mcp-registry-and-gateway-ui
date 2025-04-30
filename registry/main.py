@@ -2,11 +2,24 @@ import os
 import re
 import json
 import secrets
+import asyncio
+import subprocess
 from contextlib import asynccontextmanager
 from pathlib import Path  # Import Path
-from typing import Annotated
+from typing import Annotated, List, Set
+from datetime import datetime, timezone, timedelta
 
-from fastapi import FastAPI, Request, Depends, HTTPException, Form, status, Cookie
+from fastapi import (
+    FastAPI,
+    Request,
+    Depends,
+    HTTPException,
+    Form,
+    status,
+    Cookie,
+    WebSocket,
+    WebSocketDisconnect,
+)
 from fastapi.responses import HTMLResponse, RedirectResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
@@ -30,6 +43,60 @@ NGINX_TEMPLATE_PATH = BASE_DIR / "nginx_template.conf" # Path to the template
 # In-memory state store
 REGISTERED_SERVERS = {}
 MOCK_SERVICE_STATE = {}
+SERVER_HEALTH_STATUS = {} # Added for health check status: path -> 'healthy' | 'unhealthy' | 'checking' | 'error: <msg>'
+HEALTH_CHECK_INTERVAL_SECONDS = 30 # Check every 10 seconds
+HEALTH_CHECK_TIMEOUT_SECONDS = 10  # Timeout for each curl check (Increased to 10)
+SERVER_LAST_CHECK_TIME = {} # path -> datetime of last check attempt (UTC)
+
+# --- WebSocket Connection Management ---
+active_connections: Set[WebSocket] = set()
+
+async def broadcast_health_status():
+    """Sends the current health status to all connected WebSocket clients."""
+    if active_connections:
+        print(f"Broadcasting health status to {len(active_connections)} clients...")
+
+        # Construct data payload with status and ISO timestamp string
+        data_to_send = {}
+        for path, status in SERVER_HEALTH_STATUS.items():
+            last_checked_dt = SERVER_LAST_CHECK_TIME.get(path)
+            # Send ISO string or None
+            last_checked_iso = last_checked_dt.isoformat() if last_checked_dt else None
+            data_to_send[path] = {
+                "status": status,
+                "last_checked_iso": last_checked_iso # Changed key
+            }
+
+        message = json.dumps(data_to_send)
+
+        # Keep track of connections that fail during send
+        disconnected_clients = set()
+
+        # Iterate over a copy of the set to allow modification during iteration
+        current_connections = list(active_connections)
+
+        # Create send tasks and associate them with the connection
+        send_tasks = []
+        for conn in current_connections:
+            send_tasks.append((conn, conn.send_text(message)))
+
+        # Run tasks concurrently and check results
+        results = await asyncio.gather(*(task for _, task in send_tasks), return_exceptions=True)
+
+        for i, result in enumerate(results):
+            conn, _ = send_tasks[i] # Get the corresponding connection
+            if isinstance(result, Exception):
+                # Check if it's a connection-related error (more specific checks possible)
+                # For now, assume any exception during send means the client is gone
+                print(f"Error sending to WebSocket client {conn.client}: {result}. Marking for removal.")
+                disconnected_clients.add(conn)
+
+        # Remove all disconnected clients identified during the broadcast
+        if disconnected_clients:
+            print(f"Removing {len(disconnected_clients)} disconnected clients after broadcast.")
+            for conn in disconnected_clients:
+                if conn in active_connections:
+                    active_connections.remove(conn)
 
 # Session management configuration
 SECRET_KEY = os.environ.get("SECRET_KEY", "insecure-default-key-for-testing-only")
@@ -175,6 +242,10 @@ def load_registered_servers_and_state():
     print(
         f"Successfully loaded {len(REGISTERED_SERVERS)} servers from individual files."
     )
+    # Initialize health status to 'checking'
+    global SERVER_HEALTH_STATUS
+    SERVER_HEALTH_STATUS = {path: "checking" for path in REGISTERED_SERVERS.keys()}
+    print(f"Initial health status: {SERVER_HEALTH_STATUS}")
 
     # Initialize mock state (Default to disabled unless state is restored elsewhere)
     # We no longer read Nginx config to get the initial state.
@@ -208,14 +279,131 @@ def save_server_to_file(server_info):
         return False
 
 
+# --- Background Health Check Task ---
+async def run_health_checks():
+    """Periodically checks the health of registered services."""
+    while True:
+        print("Running periodic health checks...")
+        paths_to_check = list(REGISTERED_SERVERS.keys())
+
+        needs_broadcast = False # Flag to check if any status actually changed
+        for path in paths_to_check:
+            if path not in REGISTERED_SERVERS: # Check if server was removed
+                continue
+
+            # --- Check if service is enabled --- START
+            is_enabled = MOCK_SERVICE_STATE.get(path, False)
+            previous_status = SERVER_HEALTH_STATUS.get(path)
+
+            if not is_enabled:
+                new_status = "disabled"
+                if previous_status != new_status:
+                    SERVER_HEALTH_STATUS[path] = new_status
+                    needs_broadcast = True
+                    print(f"Service {path} is disabled. Skipping health check.")
+                continue # Skip health check for disabled services
+            # --- Check if service is enabled --- END
+
+            # --- Record check time --- START
+            # Record the time we are attempting the check for this enabled service
+            SERVER_LAST_CHECK_TIME[path] = datetime.now(timezone.utc)
+            # --- Record check time --- END
+
+            server_info = REGISTERED_SERVERS[path]
+            url = server_info.get("proxy_pass_url")
+
+            if not url:
+                new_status = "error: missing URL"
+                if previous_status != new_status:
+                     SERVER_HEALTH_STATUS[path] = new_status
+                     needs_broadcast = True
+                continue
+
+            # Update status to 'checking' only if it wasn't already checking or disabled
+            if previous_status != "checking" and previous_status != "disabled":
+                 SERVER_HEALTH_STATUS[path] = "checking"
+                 needs_broadcast = True # Status changed to checking
+
+            cmd = ['curl', '--head', '-s', '-f', '--max-time', str(HEALTH_CHECK_TIMEOUT_SECONDS), url]
+            current_status = "checking" # Default assumption before check
+
+            try:
+                proc = await asyncio.create_subprocess_exec(
+                    *cmd,
+                    stdout=asyncio.subprocess.PIPE,
+                    stderr=asyncio.subprocess.PIPE
+                )
+                stdout, stderr = await asyncio.wait_for(proc.communicate(), timeout=HEALTH_CHECK_TIMEOUT_SECONDS + 2)
+                stderr_str = stderr.decode().strip() if stderr else ''
+
+                if proc.returncode == 0:
+                    current_status = "healthy"
+                elif proc.returncode == 28:
+                    current_status = f"error: timeout ({HEALTH_CHECK_TIMEOUT_SECONDS}s)"
+                    print(f"Health check timeout for {path} ({url})")
+                elif proc.returncode == 22:
+                    current_status = "unhealthy (HTTP error)"
+                    print(f"Health check unhealthy (HTTP >= 400) for {path} ({url}). Stderr: {stderr_str}")
+                elif proc.returncode == 7:
+                     current_status = "error: connection failed"
+                     print(f"Health check connection failed for {path} ({url}). Stderr: {stderr_str}")
+                else:
+                    error_msg = f"error: check failed (code {proc.returncode})"
+                    if stderr_str:
+                        error_msg += f" - {stderr_str}"
+                    current_status = error_msg
+                    print(f"Health check failed for {path} ({url}): {error_msg}")
+
+            except asyncio.TimeoutError:
+                 current_status = f"error: check process timeout"
+                 print(f"Health check asyncio.wait_for timeout for {path} ({url})")
+            except FileNotFoundError:
+                current_status = "error: command not found"
+                print("ERROR: 'curl' command not found. Stopping health checks.")
+                # Decide if we should stop all checks or just mark this one
+                # For now, just mark this one and continue checking others
+            except Exception as e:
+                current_status = f"error: {type(e).__name__}"
+                print(f"ERROR: Unexpected error during health check for {path} ({url}): {e}")
+
+            # Update status only if it changed
+            if previous_status != current_status:
+                SERVER_HEALTH_STATUS[path] = current_status
+                needs_broadcast = True
+
+        print(f"Finished health checks. Current status: {SERVER_HEALTH_STATUS}")
+        # Broadcast status update only if something changed
+        await broadcast_health_status()
+        # Wait for the next interval
+        await asyncio.sleep(HEALTH_CHECK_INTERVAL_SECONDS)
+
+
 # --- Lifespan for Startup Task ---
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     print("Running startup tasks...")
-    load_registered_servers_and_state()
+    load_registered_servers_and_state() # Loads servers, initializes health status
+    # --- Initialize health status based on enabled state --- START
+    global SERVER_HEALTH_STATUS
+    for path in REGISTERED_SERVERS.keys():
+        SERVER_LAST_CHECK_TIME[path] = None # Initialize last check time
+        if MOCK_SERVICE_STATE.get(path, False):
+            SERVER_HEALTH_STATUS[path] = "checking" # Check enabled services
+        else:
+            SERVER_HEALTH_STATUS[path] = "disabled" # Mark disabled services
+    print(f"Initialized health status based on enabled state: {SERVER_HEALTH_STATUS}")
+    # --- Initialize health status based on enabled state --- END
     regenerate_nginx_config() # Generate config after loading state
+    print("Starting background health check task...")
+    health_check_task = asyncio.create_task(run_health_checks())
     yield
     print("Running shutdown tasks...")
+    print("Cancelling background health check task...")
+    health_check_task.cancel()
+    try:
+        await health_check_task
+    except asyncio.CancelledError:
+        print("Health check task cancelled successfully.")
 
 
 app = FastAPI(lifespan=lifespan)
@@ -356,6 +544,8 @@ async def read_root(
                     "num_stars": server_info.get("num_stars", 0),
                     "is_python": server_info.get("is_python", False),
                     "license": server_info.get("license", "N/A"),
+                    "health_status": SERVER_HEALTH_STATUS.get(path, "unknown"), # Get current health status
+                    "last_checked_iso": SERVER_LAST_CHECK_TIME.get(path).isoformat() if SERVER_LAST_CHECK_TIME.get(path) else None
                 }
             )
     # --- End Debug ---
@@ -384,11 +574,59 @@ async def toggle_service_route(
         f"Simulated toggle for '{server_name}' ({service_path}) to {new_state} by user '{username}'"
     )
 
+    # --- Update health status immediately on toggle --- START
+    new_status = ""
+    last_checked_iso = None
+    if new_state:
+        new_status = "checking"
+        SERVER_LAST_CHECK_TIME[service_path] = None # Reset last check time
+        last_checked_iso = None # Will show 'Never' initially
+    else:
+        new_status = "disabled"
+        # Keep the last check time from when it was enabled
+        last_checked_dt = SERVER_LAST_CHECK_TIME.get(service_path)
+        last_checked_iso = last_checked_dt.isoformat() if last_checked_dt else None
+
+    SERVER_HEALTH_STATUS[service_path] = new_status
+
+    # --- Send *targeted* update via WebSocket --- START
+    # Send immediate feedback for the toggled service only
+    update_data = {
+        service_path: {
+            "status": new_status,
+            "last_checked_iso": last_checked_iso
+        }
+    }
+    message = json.dumps(update_data)
+    print(f"--- TOGGLE: Sending targeted update: {message}")
+
+    # Create task to send without blocking the request
+    async def send_specific_update():
+        disconnected_clients = set()
+        current_connections = list(active_connections)
+        send_tasks = []
+        for conn in current_connections:
+            send_tasks.append((conn, conn.send_text(message)))
+
+        results = await asyncio.gather(*(task for _, task in send_tasks), return_exceptions=True)
+
+        for i, result in enumerate(results):
+            conn, _ = send_tasks[i]
+            if isinstance(result, Exception):
+                print(f"Error sending toggle update to WebSocket client {conn.client}: {result}. Marking for removal.")
+                disconnected_clients.add(conn)
+        if disconnected_clients:
+            print(f"Removing {len(disconnected_clients)} disconnected clients after toggle update.")
+            for conn in disconnected_clients:
+                if conn in active_connections:
+                    active_connections.remove(conn)
+
+    asyncio.create_task(send_specific_update())
+    # --- Send *targeted* update via WebSocket --- END
+
     # Regenerate Nginx config after toggling state
     if not regenerate_nginx_config():
-        # Handle error - maybe return an error response or just log it
         print("ERROR: Failed to update Nginx configuration after toggle.")
-        # Consider raising an HTTPException or returning a specific error response
 
     query_param = request.query_params.get("query", "")
     redirect_url = f"/?query={query_param}" if query_param else "/"
@@ -445,15 +683,18 @@ async def register_service(
     # Add to in-memory registry and default to disabled
     REGISTERED_SERVERS[path] = server_entry
     MOCK_SERVICE_STATE[path] = False
+    # Set initial health status for the new service (always start disabled)
+    SERVER_HEALTH_STATUS[path] = "disabled" # Start disabled
+    SERVER_LAST_CHECK_TIME[path] = None # No check time yet
 
     # Regenerate Nginx config after successful registration
     if not regenerate_nginx_config():
-        # Handle error - registration succeeded but config generation failed.
-        # Maybe log the error but still return success for registration?
         print("ERROR: Failed to update Nginx configuration after registration.")
-        # Consider adding a warning to the response
 
     print(f"New service registered: '{name}' at path '{path}' by user '{username}'")
+
+    # Broadcast the updated status after registration
+    asyncio.create_task(broadcast_health_status())
 
     return JSONResponse(
         status_code=201,
@@ -559,6 +800,40 @@ async def edit_server_submit(
 
     # Redirect back to the main page
     return RedirectResponse(url="/", status_code=status.HTTP_303_SEE_OTHER)
+
+
+# --- WebSocket Endpoint ---
+@app.websocket("/ws/health_status")
+async def websocket_endpoint(websocket: WebSocket):
+    await websocket.accept()
+    active_connections.add(websocket)
+    print(f"WebSocket client connected: {websocket.client}")
+    try:
+        # --- Send initial status upon connection (Formatted) --- START
+        initial_data_to_send = {}
+        for path, status in SERVER_HEALTH_STATUS.items():
+            last_checked_dt = SERVER_LAST_CHECK_TIME.get(path)
+            # Send ISO string or None
+            last_checked_iso = last_checked_dt.isoformat() if last_checked_dt else None
+            initial_data_to_send[path] = {
+                "status": status,
+                "last_checked_iso": last_checked_iso # Changed key
+            }
+        await websocket.send_text(json.dumps(initial_data_to_send))
+        # --- Send initial status upon connection (Formatted) --- END
+
+        # Keep connection open, handle potential disconnects
+        while True:
+            # We don't expect messages from client in this case, just keep alive
+            await websocket.receive_text() # This will raise WebSocketDisconnect if client closes
+    except WebSocketDisconnect:
+        print(f"WebSocket client disconnected: {websocket.client}")
+    except Exception as e:
+        print(f"WebSocket error for {websocket.client}: {e}")
+    finally:
+        if websocket in active_connections:
+            active_connections.remove(websocket)
+            print(f"WebSocket connection removed: {websocket.client}")
 
 
 # --- Run (for local testing) ---

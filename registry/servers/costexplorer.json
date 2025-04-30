@@ -2,7 +2,7 @@
   "server_name": "Cost Explorer Service",
   "description": "Provides endpoints for analyzing cloud cost data and generating reports.",
   "path": "/costexplorer",
-  "proxy_pass_url": "http://0.0.0.0:8000/mcp",
+  "proxy_pass_url": "http://0.0.0.0:8000/sse",
   "tags": [],
   "num_tools": 444,
   "num_stars": 0,
