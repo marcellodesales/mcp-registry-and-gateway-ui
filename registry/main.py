@@ -39,12 +39,13 @@ SERVERS_DIR = BASE_DIR / "servers"  # Directory to store individual server JSON 
 STATIC_DIR = BASE_DIR / "static"
 TEMPLATES_DIR = BASE_DIR / "templates"
 NGINX_TEMPLATE_PATH = BASE_DIR / "nginx_template.conf" # Path to the template
+STATE_FILE_PATH = BASE_DIR / "server_state.json" # Path to store enabled/disabled state
 
 # In-memory state store
 REGISTERED_SERVERS = {}
 MOCK_SERVICE_STATE = {}
 SERVER_HEALTH_STATUS = {} # Added for health check status: path -> 'healthy' | 'unhealthy' | 'checking' | 'error: <msg>'
-HEALTH_CHECK_INTERVAL_SECONDS = 30 # Check every 10 seconds
+HEALTH_CHECK_INTERVAL_SECONDS = 300 # Check every 5 minutes (restored)
 HEALTH_CHECK_TIMEOUT_SECONDS = 10  # Timeout for each curl check (Increased to 10)
 SERVER_LAST_CHECK_TIME = {} # path -> datetime of last check attempt (UTC)
 
@@ -242,18 +243,56 @@ def load_registered_servers_and_state():
     print(
         f"Successfully loaded {len(REGISTERED_SERVERS)} servers from individual files."
     )
-    # Initialize health status to 'checking'
-    global SERVER_HEALTH_STATUS
-    SERVER_HEALTH_STATUS = {path: "checking" for path in REGISTERED_SERVERS.keys()}
-    print(f"Initial health status: {SERVER_HEALTH_STATUS}")
 
-    # Initialize mock state (Default to disabled unless state is restored elsewhere)
-    # We no longer read Nginx config to get the initial state.
-    # State should ideally be persisted or default to disabled on startup.
-    print("Initializing mock service state (defaulting to disabled)...")
-    MOCK_SERVICE_STATE = {path: False for path in REGISTERED_SERVERS.keys()}
-    # TODO: Consider loading initial state from a persistent store if needed
-    print(f"Initial mock state: {MOCK_SERVICE_STATE}")
+    # --- Load persisted mock service state --- START
+    print(f"Attempting to load persisted state from {STATE_FILE_PATH}...")
+    loaded_state = {}
+    try:
+        if STATE_FILE_PATH.exists():
+            with open(STATE_FILE_PATH, "r") as f:
+                loaded_state = json.load(f)
+            if not isinstance(loaded_state, dict):
+                print(f"Warning: Invalid state format in {STATE_FILE_PATH}. Expected a dictionary. Ignoring.")
+                loaded_state = {} # Reset if format is wrong
+            else:
+                print("Successfully loaded persisted state.")
+        else:
+            print("No persisted state file found. Initializing state.")
+
+    except json.JSONDecodeError as e:
+        print(f"ERROR: Could not parse JSON from {STATE_FILE_PATH}: {e}. Initializing state.")
+        loaded_state = {}
+    except Exception as e:
+        print(f"ERROR: Failed to read state file {STATE_FILE_PATH}: {e}. Initializing state.")
+        loaded_state = {}
+
+    # Initialize MOCK_SERVICE_STATE: Use loaded state if valid, otherwise default to False.
+    # Ensure state only contains keys for currently registered servers.
+    MOCK_SERVICE_STATE = {}
+    for path in REGISTERED_SERVERS.keys():
+        MOCK_SERVICE_STATE[path] = loaded_state.get(path, False) # Default to False if not in loaded state or state was invalid
+
+    print(f"Final initial mock state: {MOCK_SERVICE_STATE}")
+    # --- Load persisted mock service state --- END
+
+
+    # Initialize health status to 'checking' or 'disabled' based on the just loaded state
+    global SERVER_HEALTH_STATUS
+    SERVER_HEALTH_STATUS = {} # Start fresh
+    for path, is_enabled in MOCK_SERVICE_STATE.items():
+        if path in REGISTERED_SERVERS: # Should always be true here now
+            SERVER_HEALTH_STATUS[path] = "checking" if is_enabled else "disabled"
+        else:
+             # This case should ideally not happen if MOCK_SERVICE_STATE is built from REGISTERED_SERVERS
+             print(f"Warning: Path {path} found in loaded state but not in registered servers. Ignoring.")
+
+    print(f"Initialized health status based on loaded state: {SERVER_HEALTH_STATUS}")
+
+    # We no longer need the explicit default initialization block below
+    # print("Initializing mock service state (defaulting to disabled)...")
+    # MOCK_SERVICE_STATE = {path: False for path in REGISTERED_SERVERS.keys()}
+    # # TODO: Consider loading initial state from a persistent store if needed
+    # print(f"Initial mock state: {MOCK_SERVICE_STATE}")
 
 
 # --- Helper function to save server data ---
@@ -279,101 +318,141 @@ def save_server_to_file(server_info):
         return False
 
 
+# --- Single Health Check Logic ---
+async def perform_single_health_check(path: str) -> tuple[str, datetime | None]:
+    """Performs a health check for a single service path and updates global state."""
+    global SERVER_HEALTH_STATUS, SERVER_LAST_CHECK_TIME
+
+    server_info = REGISTERED_SERVERS.get(path)
+    if not server_info:
+        # Should not happen if called correctly, but handle defensively
+        return "error: server not registered", None
+
+    url = server_info.get("proxy_pass_url")
+    previous_status = SERVER_HEALTH_STATUS.get(path) # Get status before check
+
+    # --- Record check time ---
+    last_checked_time = datetime.now(timezone.utc)
+    SERVER_LAST_CHECK_TIME[path] = last_checked_time
+    # --- Record check time ---
+
+    if not url:
+        current_status = "error: missing URL"
+        SERVER_HEALTH_STATUS[path] = current_status
+        print(f"Health check skipped for {path}: Missing URL.")
+        return current_status, last_checked_time
+
+    # Update status to 'checking' before performing the check
+    # Only print if status actually changes to 'checking'
+    if previous_status != "checking":
+        print(f"Setting status to 'checking' for {path} ({url})...")
+        SERVER_HEALTH_STATUS[path] = "checking"
+        # Optional: Consider a targeted broadcast here if immediate 'checking' feedback is desired
+        # await broadcast_specific_update(path, "checking", last_checked_time)
+
+    cmd = ['curl', '--head', '-s', '-f', '--max-time', str(HEALTH_CHECK_TIMEOUT_SECONDS), url]
+    current_status = "checking" # Status will be updated below
+
+    try:
+        proc = await asyncio.create_subprocess_exec(
+            *cmd,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE
+        )
+        # Use a slightly longer timeout for wait_for to catch process hangs
+        stdout, stderr = await asyncio.wait_for(proc.communicate(), timeout=HEALTH_CHECK_TIMEOUT_SECONDS + 2)
+        stderr_str = stderr.decode().strip() if stderr else ''
+
+        if proc.returncode == 0:
+            current_status = "healthy"
+            print(f"Health check successful for {path} ({url}).")
+        elif proc.returncode == 28:
+            current_status = f"error: timeout ({HEALTH_CHECK_TIMEOUT_SECONDS}s)"
+            print(f"Health check timeout for {path} ({url})")
+        elif proc.returncode == 22: # HTTP error >= 400
+            current_status = "unhealthy (HTTP error)"
+            print(f"Health check unhealthy (HTTP >= 400) for {path} ({url}). Stderr: {stderr_str}")
+        elif proc.returncode == 7: # Connection failed
+            current_status = "error: connection failed"
+            print(f"Health check connection failed for {path} ({url}). Stderr: {stderr_str}")
+        else: # Other curl errors
+            error_msg = f"error: check failed (code {proc.returncode})"
+            if stderr_str:
+                error_msg += f" - {stderr_str}"
+            current_status = error_msg
+            print(f"Health check failed for {path} ({url}): {error_msg}")
+
+    except asyncio.TimeoutError:
+        # This catches timeout on asyncio.wait_for, slightly different from curl's --max-time
+        current_status = f"error: check process timeout"
+        print(f"Health check asyncio.wait_for timeout for {path} ({url})")
+    except FileNotFoundError:
+        current_status = "error: command not found"
+        print(f"ERROR: 'curl' command not found during health check for {path}. Cannot perform check.")
+        # No need to stop all checks, just this one fails
+    except Exception as e:
+        current_status = f"error: {type(e).__name__}"
+        print(f"ERROR: Unexpected error during health check for {path} ({url}): {e}")
+
+    # Update the global status *after* the check completes
+    SERVER_HEALTH_STATUS[path] = current_status
+    print(f"Final health status for {path}: {current_status}")
+
+    return current_status, last_checked_time
+
+
 # --- Background Health Check Task ---
 async def run_health_checks():
-    """Periodically checks the health of registered services."""
+    """Periodically checks the health of registered *enabled* services."""
     while True:
-        print("Running periodic health checks...")
+        print(f"Running periodic health checks (Interval: {HEALTH_CHECK_INTERVAL_SECONDS}s)...")
         paths_to_check = list(REGISTERED_SERVERS.keys())
-
         needs_broadcast = False # Flag to check if any status actually changed
+
         for path in paths_to_check:
-            if path not in REGISTERED_SERVERS: # Check if server was removed
+            if path not in REGISTERED_SERVERS: # Check if server was removed during the loop
                 continue
 
-            # --- Check if service is enabled --- START
             is_enabled = MOCK_SERVICE_STATE.get(path, False)
-            previous_status = SERVER_HEALTH_STATUS.get(path)
+            previous_status = SERVER_HEALTH_STATUS.get(path) # Get status before check cycle
 
             if not is_enabled:
                 new_status = "disabled"
                 if previous_status != new_status:
                     SERVER_HEALTH_STATUS[path] = new_status
+                    # Also clear last check time when disabling? Or keep it? Keep for now.
+                    # SERVER_LAST_CHECK_TIME[path] = None
                     needs_broadcast = True
-                    print(f"Service {path} is disabled. Skipping health check.")
+                    print(f"Service {path} is disabled. Setting status.")
                 continue # Skip health check for disabled services
-            # --- Check if service is enabled --- END
 
-            # --- Record check time --- START
-            # Record the time we are attempting the check for this enabled service
-            SERVER_LAST_CHECK_TIME[path] = datetime.now(timezone.utc)
-            # --- Record check time --- END
-
-            server_info = REGISTERED_SERVERS[path]
-            url = server_info.get("proxy_pass_url")
-
-            if not url:
-                new_status = "error: missing URL"
-                if previous_status != new_status:
-                     SERVER_HEALTH_STATUS[path] = new_status
-                     needs_broadcast = True
-                continue
-
-            # Update status to 'checking' only if it wasn't already checking or disabled
-            if previous_status != "checking" and previous_status != "disabled":
-                 SERVER_HEALTH_STATUS[path] = "checking"
-                 needs_broadcast = True # Status changed to checking
-
-            cmd = ['curl', '--head', '-s', '-f', '--max-time', str(HEALTH_CHECK_TIMEOUT_SECONDS), url]
-            current_status = "checking" # Default assumption before check
-
+            # --- Service is enabled, perform check using the new function ---
+            print(f"Performing periodic check for enabled service: {path}")
             try:
-                proc = await asyncio.create_subprocess_exec(
-                    *cmd,
-                    stdout=asyncio.subprocess.PIPE,
-                    stderr=asyncio.subprocess.PIPE
-                )
-                stdout, stderr = await asyncio.wait_for(proc.communicate(), timeout=HEALTH_CHECK_TIMEOUT_SECONDS + 2)
-                stderr_str = stderr.decode().strip() if stderr else ''
-
-                if proc.returncode == 0:
-                    current_status = "healthy"
-                elif proc.returncode == 28:
-                    current_status = f"error: timeout ({HEALTH_CHECK_TIMEOUT_SECONDS}s)"
-                    print(f"Health check timeout for {path} ({url})")
-                elif proc.returncode == 22:
-                    current_status = "unhealthy (HTTP error)"
-                    print(f"Health check unhealthy (HTTP >= 400) for {path} ({url}). Stderr: {stderr_str}")
-                elif proc.returncode == 7:
-                     current_status = "error: connection failed"
-                     print(f"Health check connection failed for {path} ({url}). Stderr: {stderr_str}")
-                else:
-                    error_msg = f"error: check failed (code {proc.returncode})"
-                    if stderr_str:
-                        error_msg += f" - {stderr_str}"
-                    current_status = error_msg
-                    print(f"Health check failed for {path} ({url}): {error_msg}")
-
-            except asyncio.TimeoutError:
-                 current_status = f"error: check process timeout"
-                 print(f"Health check asyncio.wait_for timeout for {path} ({url})")
-            except FileNotFoundError:
-                current_status = "error: command not found"
-                print("ERROR: 'curl' command not found. Stopping health checks.")
-                # Decide if we should stop all checks or just mark this one
-                # For now, just mark this one and continue checking others
+                # Call the refactored check function
+                # We only care if the status *changed* from the beginning of the cycle for broadcast purposes
+                current_status, _ = await perform_single_health_check(path)
+                if previous_status != current_status:
+                    needs_broadcast = True
             except Exception as e:
-                current_status = f"error: {type(e).__name__}"
-                print(f"ERROR: Unexpected error during health check for {path} ({url}): {e}")
+                # Log error if the check function itself fails unexpectedly
+                print(f"ERROR: Unexpected exception calling perform_single_health_check for {path}: {e}")
+                # Update status to reflect this error?
+                error_status = f"error: check execution failed ({type(e).__name__})"
+                if previous_status != error_status:
+                    SERVER_HEALTH_STATUS[path] = error_status
+                    SERVER_LAST_CHECK_TIME[path] = datetime.now(timezone.utc) # Record time of failure
+                    needs_broadcast = True
 
-            # Update status only if it changed
-            if previous_status != current_status:
-                SERVER_HEALTH_STATUS[path] = current_status
-                needs_broadcast = True
 
-        print(f"Finished health checks. Current status: {SERVER_HEALTH_STATUS}")
-        # Broadcast status update only if something changed
-        await broadcast_health_status()
+        print(f"Finished periodic health checks. Current status map: {SERVER_HEALTH_STATUS}")
+        # Broadcast status update only if something changed during this cycle
+        if needs_broadcast:
+            print("Broadcasting updated health status after periodic check...")
+            await broadcast_health_status()
+        else:
+            print("No status changes detected in periodic check, skipping broadcast.")
+
         # Wait for the next interval
         await asyncio.sleep(HEALTH_CHECK_INTERVAL_SECONDS)
 
@@ -577,17 +656,32 @@ async def toggle_service_route(
     # --- Update health status immediately on toggle --- START
     new_status = ""
     last_checked_iso = None
+    last_checked_dt = None # Initialize datetime object
+
     if new_state:
-        new_status = "checking"
-        SERVER_LAST_CHECK_TIME[service_path] = None # Reset last check time
-        last_checked_iso = None # Will show 'Never' initially
+        # Perform immediate check when enabling
+        print(f"Performing immediate health check for {service_path} upon toggle ON...")
+        try:
+            new_status, last_checked_dt = await perform_single_health_check(service_path)
+            last_checked_iso = last_checked_dt.isoformat() if last_checked_dt else None
+            print(f"Immediate check for {service_path} completed. Status: {new_status}")
+        except Exception as e:
+            # Handle potential errors during the immediate check itself
+            print(f"ERROR during immediate health check for {service_path}: {e}")
+            new_status = f"error: immediate check failed ({type(e).__name__})"
+            # Update global state to reflect this error
+            SERVER_HEALTH_STATUS[service_path] = new_status
+            last_checked_dt = SERVER_LAST_CHECK_TIME.get(service_path) # Use time if check started
+            last_checked_iso = last_checked_dt.isoformat() if last_checked_dt else None
     else:
+        # When disabling, set status to disabled and keep last check time
         new_status = "disabled"
         # Keep the last check time from when it was enabled
         last_checked_dt = SERVER_LAST_CHECK_TIME.get(service_path)
         last_checked_iso = last_checked_dt.isoformat() if last_checked_dt else None
-
-    SERVER_HEALTH_STATUS[service_path] = new_status
+        # Update global state directly when disabling
+        SERVER_HEALTH_STATUS[service_path] = new_status
+        print(f"Service {service_path} toggled OFF. Status set to disabled.")
 
     # --- Send *targeted* update via WebSocket --- START
     # Send immediate feedback for the toggled service only
@@ -623,6 +717,16 @@ async def toggle_service_route(
 
     asyncio.create_task(send_specific_update())
     # --- Send *targeted* update via WebSocket --- END
+
+    # --- Persist the updated state --- START
+    try:
+        with open(STATE_FILE_PATH, "w") as f:
+            json.dump(MOCK_SERVICE_STATE, f, indent=2)
+        print(f"Persisted state to {STATE_FILE_PATH}")
+    except Exception as e:
+        print(f"ERROR: Failed to persist state to {STATE_FILE_PATH}: {e}")
+        # Decide if we should raise an error or just log
+    # --- Persist the updated state --- END
 
     # Regenerate Nginx config after toggling state
     if not regenerate_nginx_config():
@@ -692,6 +796,15 @@ async def register_service(
         print("ERROR: Failed to update Nginx configuration after registration.")
 
     print(f"New service registered: '{name}' at path '{path}' by user '{username}'")
+
+    # --- Persist the updated state after registration --- START
+    try:
+        with open(STATE_FILE_PATH, "w") as f:
+            json.dump(MOCK_SERVICE_STATE, f, indent=2)
+        print(f"Persisted state to {STATE_FILE_PATH} after registration")
+    except Exception as e:
+        print(f"ERROR: Failed to persist state to {STATE_FILE_PATH} after registration: {e}")
+    # --- Persist the updated state after registration --- END
 
     # Broadcast the updated status after registration
     asyncio.create_task(broadcast_health_status())
