@@ -1,0 +1,5 @@
+{
+  "server_name": "Cost Explorer Service",
+  "description": "Provides endpoints for analyzing cloud cost data and generating reports.",
+  "path": "/costexplorer"
+}

@@ -1,0 +1,5 @@
+{
+  "server_name": "Test Service",
+  "description": "This is a test service",
+  "path": "/test-service"
+}

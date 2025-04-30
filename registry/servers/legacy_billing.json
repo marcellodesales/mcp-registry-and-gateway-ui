@@ -1,0 +1,5 @@
+{
+  "server_name": "Legacy Billing API (Disabled)",
+  "description": "Older billing API, currently disabled pending migration.",
+  "path": "/legacy/billing"
+}

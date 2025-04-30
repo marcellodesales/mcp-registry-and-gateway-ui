@@ -1,0 +1,5 @@
+{
+  "server_name": "Current Time API",
+  "description": "A simple API that returns the current server time in various formats.",
+  "path": "/currenttime"
+}

@@ -1,0 +1,5 @@
+{
+  "server_name": "Financial Info Proxy",
+  "description": "Secure gateway proxy for internal financial information systems.",
+  "path": "/fininfo"
+}

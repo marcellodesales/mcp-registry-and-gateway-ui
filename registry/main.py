@@ -6,8 +6,8 @@ from contextlib import asynccontextmanager
 from pathlib import Path # Import Path
 from typing import Annotated
 
-from fastapi import FastAPI, Request, Depends, HTTPException, Form, status, Cookie
-from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi import FastAPI, Request, Depends, HTTPException, Form, status, Cookie, Body
+from fastapi.responses import HTMLResponse, RedirectResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from itsdangerous import URLSafeTimedSerializer, SignatureExpired, BadSignature
@@ -21,7 +21,7 @@ load_dotenv(dotenv_path=BASE_DIR.parent / ".env") # Load .env from parent direct
 
 # --- Configuration & State (Paths relative to this script) ---
 NGINX_CONFIG_PATH = BASE_DIR / "nginx_mcp_revproxy.conf" # In the same folder as main.py
-SERVERS_METADATA_PATH = BASE_DIR / "servers" / "servers.json" # In servers subfolder
+SERVERS_DIR = BASE_DIR / "servers" # Directory to store individual server JSON files
 STATIC_DIR = BASE_DIR / "static"
 TEMPLATES_DIR = BASE_DIR / "templates"
 
@@ -68,37 +68,54 @@ def get_initial_enabled_state_from_nginx(service_path, nginx_lines):
     if start_line == -1: return False
     return not nginx_lines[start_line].strip().startswith("#")
 
+# --- Helper function to normalize a path to a filename ---
+def path_to_filename(path):
+    # Remove leading slash and replace remaining slashes with underscores
+    normalized = path.lstrip('/').replace('/', '_')
+    # Append .json extension if not present
+    if not normalized.endswith('.json'):
+        normalized += '.json'
+    return normalized
+
 # --- Data Loading ---
 def load_registered_servers_and_state():
     global REGISTERED_SERVERS, MOCK_SERVICE_STATE
-    print(f"Loading server definitions from {SERVERS_METADATA_PATH}...")
+    print(f"Loading server definitions from {SERVERS_DIR}...")
+    
+    # Create servers directory if it doesn't exist
+    SERVERS_DIR.mkdir(exist_ok=True)
+    
     temp_servers = {}
-    try:
-        with open(SERVERS_METADATA_PATH, 'r') as f:
-            servers_list = json.load(f)
-            if not isinstance(servers_list, list):
-                 raise ValueError("servers.json should contain a JSON list.")
-            for server_info in servers_list:
-                if isinstance(server_info, dict) and "path" in server_info and "Server Name" in server_info:
+    server_files = list(SERVERS_DIR.glob('*.json'))
+    
+    if not server_files:
+        print(f"No server definition files found in {SERVERS_DIR}.")
+        REGISTERED_SERVERS = {}
+        return
+    
+    for server_file in server_files:
+        try:
+            with open(server_file, 'r') as f:
+                server_info = json.load(f)
+                
+                if isinstance(server_info, dict) and "path" in server_info and "server_name" in server_info:
                     server_path = server_info["path"]
                     if server_path in temp_servers:
-                         print(f"Warning: Duplicate server path found in {SERVERS_METADATA_PATH}: {server_path}. Skipping duplicate.")
-                         continue
+                        print(f"Warning: Duplicate server path found in {server_file}: {server_path}. Overwriting previous definition.")
+                    
                     server_info["description"] = server_info.get("description", "")
                     temp_servers[server_path] = server_info
                 else:
-                    print(f"Warning: Invalid server entry format found in {SERVERS_METADATA_PATH}. Skipping: {server_info}")
-            REGISTERED_SERVERS = temp_servers
-            print(f"Successfully loaded {len(REGISTERED_SERVERS)} servers.")
-    except FileNotFoundError:
-        print(f"ERROR: Server definition file not found at {SERVERS_METADATA_PATH}. No servers loaded.")
-        REGISTERED_SERVERS = {}
-    except json.JSONDecodeError as e:
-        print(f"ERROR: Could not parse JSON from {SERVERS_METADATA_PATH}: {e}. No servers loaded.")
-        REGISTERED_SERVERS = {}
-    except Exception as e:
-        print(f"ERROR: An unexpected error occurred loading {SERVERS_METADATA_PATH}: {e}. No servers loaded.")
-        REGISTERED_SERVERS = {}
+                    print(f"Warning: Invalid server entry format found in {server_file}. Skipping.")
+        except FileNotFoundError:
+            print(f"ERROR: Server definition file not found at {server_file}.")
+        except json.JSONDecodeError as e:
+            print(f"ERROR: Could not parse JSON from {server_file}: {e}.")
+        except Exception as e:
+            print(f"ERROR: An unexpected error occurred loading {server_file}: {e}.")
+    
+    REGISTERED_SERVERS = temp_servers
+    print(f"Successfully loaded {len(REGISTERED_SERVERS)} servers from individual files.")
 
     # Refresh mock state based on loaded servers and current Nginx config state
     print("Initializing/refreshing mock service state based on Nginx config...")
@@ -107,6 +124,26 @@ def load_registered_servers_and_state():
     for path in REGISTERED_SERVERS.keys():
         MOCK_SERVICE_STATE[path] = get_initial_enabled_state_from_nginx(path, nginx_lines)
     print(f"Initial mock state: {MOCK_SERVICE_STATE}")
+
+# --- Helper function to save server data ---
+def save_server_to_file(server_info):
+    try:
+        # Create servers directory if it doesn't exist
+        SERVERS_DIR.mkdir(exist_ok=True)
+        
+        # Generate filename based on path
+        path = server_info["path"]
+        filename = path_to_filename(path)
+        file_path = SERVERS_DIR / filename
+        
+        with open(file_path, 'w') as f:
+            json.dump(server_info, f, indent=2)
+        
+        print(f"Successfully saved server '{server_info['server_name']}' to {file_path}")
+        return True
+    except Exception as e:
+        print(f"ERROR: Failed to save server data to {filename}: {e}")
+        return False
 
 # --- Lifespan for Startup Task ---
 @asynccontextmanager
@@ -134,6 +171,21 @@ def get_current_user(session: Annotated[str | None, Cookie(alias=SESSION_COOKIE_
         raise HTTPException(status_code=307, detail="Session expired or invalid", headers={"Location": "/login"})
     except Exception:
         raise HTTPException(status_code=307, detail="Authentication error", headers={"Location": "/login"})
+
+# --- API Authentication Dependency (returns 401 instead of redirecting) ---
+def api_auth(session: Annotated[str | None, Cookie(alias=SESSION_COOKIE_NAME)] = None) -> str:
+    if session is None:
+        raise HTTPException(status_code=401, detail="Not authenticated")
+    try:
+        data = signer.loads(session, max_age=SESSION_MAX_AGE_SECONDS)
+        username = data.get("username")
+        if not username:
+             raise HTTPException(status_code=401, detail="Invalid session data")
+        return username
+    except (BadSignature, SignatureExpired):
+        raise HTTPException(status_code=401, detail="Session expired or invalid")
+    except Exception:
+        raise HTTPException(status_code=401, detail="Authentication error")
 
 # --- Static Files and Templates (Paths relative to this script) ---
 app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
@@ -170,10 +222,10 @@ async def logout():
 async def read_root(request: Request, username: Annotated[str, Depends(get_current_user)], query: str | None = None):
     service_data = []
     search_query = query.lower() if query else ""
-    sorted_server_paths = sorted(REGISTERED_SERVERS.keys(), key=lambda p: REGISTERED_SERVERS[p]["Server Name"])
+    sorted_server_paths = sorted(REGISTERED_SERVERS.keys(), key=lambda p: REGISTERED_SERVERS[p]["server_name"])
     for path in sorted_server_paths:
         server_info = REGISTERED_SERVERS[path]
-        server_name = server_info["Server Name"]
+        server_name = server_info["server_name"]
         if not search_query or search_query in server_name.lower() or search_query in server_info["description"].lower():
             service_data.append({
                 "display_name": server_name,
@@ -204,7 +256,7 @@ async def toggle_service_route(
         raise HTTPException(status_code=404, detail="Service path not registered")
     new_state = (enabled == "on")
     MOCK_SERVICE_STATE[service_path] = new_state
-    server_name = REGISTERED_SERVERS[service_path]["Server Name"]
+    server_name = REGISTERED_SERVERS[service_path]["server_name"]
     print(f"Simulated toggle for '{server_name}' ({service_path}) to {new_state} by user '{username}'")
     query_param = request.query_params.get('query', '')
     redirect_url = f"/?query={query_param}" if query_param else "/"
@@ -221,6 +273,53 @@ async def rescan_services_route(
     redirect_url = f"/?query={query_param}" if query_param else "/"
     return RedirectResponse(url=redirect_url, status_code=status.HTTP_303_SEE_OTHER)
 
+@app.post("/register")
+async def register_service(
+    name: Annotated[str, Form()],
+    description: Annotated[str, Form()],
+    path: Annotated[str, Form()],
+    username: Annotated[str, Depends(api_auth)] = None
+):
+    # Ensure path starts with a slash
+    if not path.startswith('/'):
+        path = '/' + path
+    
+    # Check if path already exists
+    if path in REGISTERED_SERVERS:
+        return JSONResponse(
+            status_code=400,
+            content={"error": f"Service with path '{path}' already exists"}
+        )
+    
+    # Create new server entry
+    server_entry = {
+        "server_name": name,
+        "description": description,
+        "path": path
+    }
+    
+    # Save to individual file
+    success = save_server_to_file(server_entry)
+    if not success:
+        return JSONResponse(
+            status_code=500, 
+            content={"error": "Failed to save server data"}
+        )
+    
+    # Add to in-memory registry and default to disabled
+    REGISTERED_SERVERS[path] = server_entry
+    MOCK_SERVICE_STATE[path] = False
+    
+    print(f"New service registered: '{name}' at path '{path}' by user '{username}'")
+    
+    return JSONResponse(
+        status_code=201,
+        content={
+            "message": "Service registered successfully",
+            "service": server_entry
+        }
+    )
+
 # --- Run (for local testing) ---
 # Use: uvicorn registry.main:app --reload --host 0.0.0.0 --port 7860 --root-path /home/ubuntu/mcp-gateway
 # (Running from parent dir)
@@ -229,4 +328,4 @@ async def rescan_services_route(
 # if __name__ == "__main__":
 #     import uvicorn
 #     # Running this way makes relative paths tricky, better to use uvicorn command from parent
-#     uvicorn.run(app, host="0.0.0.0", port=7860) 
+#     uvicorn.run(app, host="0.0.0.0", port=7860)
