@@ -1,0 +1,39 @@
+name: Lint
+
+on: [push, pull_request]
+
+permissions:
+  contents: read # Required to check out the code
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12' # Matches requires-python in pyproject.toml
+
+      - name: Install uv
+        run: curl -LsSf https://astral.sh/uv/install.sh | sh
+        env:
+          UV_HOME: /opt/uv
+
+      - name: Add uv to PATH
+        run: echo "/opt/uv/bin" >> $GITHUB_PATH
+
+      - name: Install dependencies including Ruff using uv
+        run: |
+          uv pip install ruff
+          # Install project dependencies if needed for Ruff checks (optional, depends on your Ruff config)
+          # uv pip install -e .
+
+      - name: Run Ruff linter
+        run: ruff check .
+
+      # Optionally, add a step to check formatting
+      # - name: Run Ruff formatter check
+      #   run: ruff format --check . 
