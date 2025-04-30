@@ -5,6 +5,289 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>MCP Gateway - Servers (Test)</title>
     <link rel="stylesheet" href="{{ url_for('static', path='/style.css') }}">
+    <style>
+        /* Keyframes for spinner animation */
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* -- Theme Color Variables -- */
+        :root {
+            --bg-color: #f8f9fa; /* Light background */
+            --text-color: #212529; /* Dark text */
+            --card-bg: #ffffff; /* White cards */
+            --card-border: #dee2e6; /* Keep border color */
+            --header-bg: #e9ecef;
+            --sidebar-bg: var(--bg-color); /* Match main background */
+            --button-bg: #0d6efd; /* Primary button */
+            --button-text: #ffffff;
+            --secondary-button-bg: #6c757d; /* Gray secondary */
+            --secondary-button-text: #ffffff;
+            --link-color: #0d6efd;
+            --badge-bg: #6c757d;
+            --badge-text: #ffffff;
+            --official-badge-bg: #0d6efd;
+            --official-badge-text: #ffffff;
+            --input-bg: #ffffff;
+            --input-text: #212529;
+            --input-placeholder: #6c757d;
+            /* Theme Toggle Button Colors - Light Mode */
+            --toggle-button-bg: #ffffff; /* White background */
+            --toggle-button-text: #212529; /* Dark icon */
+            --toggle-button-border: #dee2e6; /* Light border */
+            /* Add more variables as needed */
+        }
+
+        html.dark-mode {
+            --bg-color: #212529; /* Dark background */
+            --text-color: #f8f9fa; /* Light text */
+            --card-bg: #343a40; /* Darker cards */
+            --card-border: #495057;
+            --header-bg: #495057;
+            --sidebar-bg: var(--bg-color); /* Match main background */
+            --button-bg: #0d6efd; /* Keep primary button */
+            --button-text: #ffffff;
+            --secondary-button-bg: #6c757d; /* Keep secondary button gray */
+            --secondary-button-text: #ffffff;
+            --link-color: #6ea8fe; /* Lighter blue link */
+            --badge-bg: #adb5bd;
+            --badge-text: #212529;
+            --official-badge-bg: #6ea8fe; /* Lighter blue official */
+            --official-badge-text: #212529; /* Dark text on light blue */
+            --input-bg: #495057;
+            --input-text: #f8f9fa;
+            --input-placeholder: #adb5bd;
+            /* Theme Toggle Button Colors - Dark Mode */
+            --toggle-button-bg: #495057; /* Dark background (matches header) */
+            --toggle-button-text: #f8f9fa; /* Light icon */
+            --toggle-button-border: #6c757d; /* Darker border */
+        }
+
+        /* Apply variables */
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-color);
+        }
+        .main-header {
+            background-color: var(--header-bg);
+            border-bottom: 1px solid var(--card-border); /* Add subtle border */
+            /* Assuming header text color is inherited or set in style.css */
+        }
+        .sidebar {
+             background-color: var(--sidebar-bg);
+             color: var(--text-color); /* Ensure sidebar uses main text color */
+        }
+        .sidebar h3 {
+            color: var(--text-color); /* Ensure heading uses text color */
+            border-bottom: 1px solid var(--card-border); /* Add separator */
+            padding-bottom: 0.5em;
+            margin-bottom: 1em;
+        }
+        .sidebar ul,
+        .sidebar ul li,
+        .sidebar ul li span,
+        .sidebar ul li span:first-child { /* Ensure all sidebar text inherits */
+             font-weight: 600; /* Make label slightly bolder */
+             color: var(--text-color);
+        }
+        .sidebar ul li span:last-child {
+             /* Assuming the count badge has its own styling */
+        }
+        .service-card {
+            background-color: var(--card-bg);
+            border: 1px solid var(--card-border);
+            color: var(--text-color); /* Ensure card text uses theme color */
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05); /* Subtle shadow */
+        }
+        .service-card h2, .service-card .owner, .service-card .description {
+             color: var(--text-color); /* Explicitly set text color */
+        }
+        /* Example for a specific badge if needed */
+        .badge {
+            background-color: var(--badge-bg);
+            color: var(--badge-text);
+        }
+        .edit-button {
+            /* Assuming style.css defines button styles, override if needed */
+            /* background-color: var(--button-bg); */
+            /* color: var(--button-text); */
+        }
+        a {
+            color: var(--link-color);
+        }
+        .toggle-label {
+            color: var(--text-color);
+        }
+        .logout-button,
+        .search-bar button {
+            background-color: var(--secondary-button-bg);
+            color: var(--secondary-button-text);
+            border: 1px solid var(--secondary-button-bg);
+        }
+        .edit-button { /* Assuming this is primary */
+            background-color: var(--button-bg);
+            color: var(--button-text);
+            /* Add padding/border etc. if needed from style.css */
+        }
+        .search-bar input[type="search"] {
+            background-color: var(--input-bg);
+            color: var(--input-text);
+            border: 1px solid var(--card-border);
+        }
+        .search-bar input[type="search"]::placeholder {
+            color: var(--input-placeholder);
+            opacity: 1; /* Override browser defaults */
+        }
+        .official-badge {
+            background-color: var(--official-badge-bg);
+            color: var(--official-badge-text);
+            padding: 0.2em 0.6em; /* Add padding if it doesn't have it */
+            border-radius: 0.8em; /* Add rounding if it doesn't have it */
+            font-size: 0.8em;
+            font-weight: bold;
+            vertical-align: middle;
+        }
+
+        /* Health Status Badge Styles */
+        .status-badge {
+            border-radius: 0.8em;
+            font-size: 0.8em;
+            font-weight: bold;
+            color: white;
+            vertical-align: middle;
+            white-space: nowrap;
+            display: inline-block;
+            padding: 0.2em 0.6em;
+            line-height: 1.4;
+            margin-right: 5px;
+        }
+        .status-healthy {
+            background-color: #28a745; /* Green */
+        }
+        .status-unhealthy {
+            background-color: #dc3545; /* Red */
+        }
+        .status-error {
+            background-color: #6c757d; /* Gray */
+        }
+        .status-disabled {
+            background-color: #adb5bd; /* Lighter Gray */
+            color: #333;
+        }
+        .status-unknown {
+            background-color: #adb5bd; /* Lighter Gray */
+             color: #333;
+        }
+
+        /* Style for the separate spinner */
+        .status-spinner {
+            display: none; /* Hidden by default */
+            width: 1.2em;
+            height: 1.2em;
+            border: 2px solid rgba(253, 126, 20, 0.3); /* Light orange base border */
+            border-top-color: #fd7e14; /* Spinner color (Orange) */
+            border-radius: 50%;
+            vertical-align: middle;
+            display: inline-block;
+            animation: spin 1s linear infinite;
+            box-sizing: border-box;
+            position: relative; /* Allow relative positioning */
+            top: -5px; /* Nudge down slightly (adjust as needed) */
+        }
+
+        /* Wrapper for badge and spinner */
+        .status-indicator-area {
+            display: flex;
+            align-items: center; /* Back to center alignment */
+            margin-bottom: 10px; /* Space below this area */
+            /* height: 2em; */ /* Optional: Set a fixed height for the container? */
+        }
+
+        /* Adjust header items container */
+        .card-header .header-right-items {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        /* New style for controls row */
+        .card-body .controls-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between; /* Push items to ends */
+            gap: 15px; /* Space between items if they were closer */
+            margin-top: 15px; /* Add some space above this row */
+        }
+
+        /* Ensure toggle form doesn't take extra space */
+        .card-body .toggle-form {
+            margin: 0; /* Remove default margins if any */
+        }
+
+        /* Style for the moved status badge */
+        .card-body .status-badge {
+            display: inline-block; /* Allow margin */
+            margin-bottom: 10px; /* Space below badge */
+        }
+
+        /* Ensure main title uses text color */
+        .content h1 {
+            color: var(--text-color);
+        }
+
+        /* --- Theme Toggle Button --- */
+        .theme-toggle-button {
+            cursor: pointer;
+            font-size: 1.1em; /* Make icon smaller */
+            background: none; /* Transparent background */
+            border: none; /* No border */
+            color: var(--text-color); /* Use main text color for icon */
+            padding: 0; /* Remove padding */
+            margin-left: 10px; /* Add some space */
+            position: relative; /* Allow nudging */
+            top: -2px; /* Nudge up slightly (adjust px value if needed) */
+        }
+
+        /* Ensure header right items are vertically centered */
+        .header-right {
+            display: flex;
+            align-items: center;
+            gap: 15px; /* Adjust spacing as needed */
+        }
+
+        /* Explicit alignment for non-button items */
+        .header-right .user-display {
+            vertical-align: middle;
+        }
+
+        /* Ensure form aligns correctly in flex context */
+        .header-right form {
+             margin: 0; /* Remove default form margin */
+             padding: 0; /* Remove default form padding */
+             display: inline-block; /* Treat form like an inline block */
+             vertical-align: middle;
+        }
+    </style>
+    <script>
+        // Immediately invoked function to apply theme before rendering
+        (function() {
+            const savedTheme = localStorage.getItem('theme');
+            const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+            // Default to dark if no preference saved
+            const theme = savedTheme || (prefersDark ? 'dark' : 'dark');
+
+            console.log('[HEAD SCRIPT] Determined initial theme:', theme);
+
+            if (theme === 'dark') {
+                document.documentElement.classList.add('dark-mode');
+                console.log('[HEAD SCRIPT] Applied dark-mode class.');
+            } else {
+                document.documentElement.classList.remove('dark-mode');
+                console.log('[HEAD SCRIPT] Ensured dark-mode class removed.');
+            }
+        })();
+    </script>
 </head>
 <body>
     <!-- Main Header -->
@@ -14,6 +297,7 @@
             <span>MCP Gateway</span>
         </div>
         <div class="header-right"> <!-- Added back header-right -->
+            <button id="theme-toggle" class="theme-toggle-button" title="Toggle Theme">🌙</button> <!-- Reverted to Button -->
             <span class="user-display">User: {{ username }}</span>
             <form action="/logout" method="post" style="display: inline;">
                 <button type="submit" class="logout-button">Logout</button>
@@ -57,8 +341,10 @@
                     <div class="service-card">
                         <div class="card-header">
                             <h2>{{ service.display_name }}</h2>
-                            <span class="official-badge">official</span>
-                            <span class="icons">☁️ 💻 🔄</span>
+                            <div class="header-right-items">
+                                <span class="official-badge">official</span>
+                                <span class="icons">☁️ 💻 🔄</span>
+                            </div>
                         </div>
                         <div class="card-body">
                             <p class="owner">Path: {{ service.path }}</p>
@@ -70,16 +356,66 @@
                             <p class="description">
                                 {{ service.description | default('No description provided.') }}
                             </p>
-                            <form action="/toggle{{ service.path }}" method="post" class="toggle-form">
-                                <label class="switch">
-                                    <input type="checkbox" name="enabled" value="on" {% if service.is_enabled %}checked{% endif %} onchange="this.form.submit()">
-                                    <span class="slider round"></span>
-                                </label>
-                                <span class="toggle-label">{{ 'Enabled' if service.is_enabled else 'Disabled' }}</span>
-                            </form>
+
+                            {# --- Moved Status Badge Logic Here --- #}
+                            {% set initial_status = service.health_status %}
+                            {# Determine initial class and text, avoiding 'checking' text #}
+                            {% set status_class = 'status-unknown' %}
+                            {% set display_text = 'unknown' %}
+
+                            {% if initial_status == 'healthy' %}
+                                {% set status_class = 'status-healthy' %}
+                                {% set display_text = 'healthy' %}
+                            {% elif initial_status.startswith('unhealthy') %}
+                                {% set status_class = 'status-unhealthy' %}
+                                {% set display_text = initial_status.split('(')[0].strip() %}
+                            {% elif initial_status.startswith('error') %}
+                                {% set status_class = 'status-error' %}
+                                {% set display_text = initial_status.split('(')[0].strip() %}
+                            {% elif initial_status == 'disabled' %}
+                                {% set status_class = 'status-disabled' %}
+                                {% set display_text = 'disabled' %}
+                            {% elif initial_status == 'checking' %}
+                                {# If checking initially, display as 'unknown' until first WS update #}
+                                {# Spinner will be shown by JS if needed #}
+                                {% set status_class = 'status-unknown' %}
+                                {% set display_text = 'unknown' %}
+                            {% endif %}
+
+                            {# Generate IDs #}
+                            {% set badge_id = 'status-badge-' + service.path | replace('/', '_') | replace(':', '_') %}
+                            {% set spinner_id = 'spinner-for-' + service.path | replace('/', '_') | replace(':', '_') %}
+                            {% set last_checked_id = 'last-checked-' + service.path | replace('/', '_') | replace(':', '_') %}
+
+                            {# Render badge with determined initial text/class #}
+                            <div class="status-indicator-area">
+                                <span id="{{ badge_id }}" class="status-badge {{ status_class }}" title="{{ initial_status }}">{{ display_text }}</span>
+                                {# Only render spinner initially if status IS checking #}
+                                {% if initial_status == 'checking' %}
+                                    <span id="{{ spinner_id }}" class="status-spinner" style="display: inline-block;"></span>
+                                {% else %}
+                                    {# Render hidden spinner placeholder otherwise, JS will show if needed #}
+                                    <span id="{{ spinner_id }}" class="status-spinner"></span>
+                                {% endif %}
+                            </div>
+
+                            <div class="controls-row">
+                                <a href="/edit{{ service.path }}" class="edit-button">Modify</a>
+                                <form action="/toggle{{ service.path }}" method="post" class="toggle-form">
+                                    <label class="switch">
+                                        <input type="checkbox" name="enabled" value="on" {% if service.is_enabled %}checked{% endif %} onchange="this.form.submit()">
+                                        <span class="slider round"></span>
+                                    </label>
+                                    <span class="toggle-label">{{ 'Enabled' if service.is_enabled else 'Disabled' }}</span>
+                                </form>
+                            </div>
                         </div>
                         <div class="card-footer">
-                            <span class="metadata">🕒 Last updated: Just now (Simulated)</span>
+                            {% set last_checked_id = 'last-checked-' + service.path | replace('/', '_') | replace(':', '_') %}
+                            {# Store ISO timestamp, display initial formatted text inside span #}
+                            <span id="{{ last_checked_id }}" class="metadata" data-timestamp="{{ service.last_checked_iso or '' }}">
+                                🕒 Last checked: <span class="time-ago">Never</span>
+                            </span>
                             <span class="metadata">🔧 {{ service.num_tools }}</span>
                             <span class="metadata">⭐ {{ service.num_stars }}</span>
                             <div class="platform-icons">
@@ -99,5 +435,196 @@
         </main> <!-- end content -->
     </div> <!-- end container -->
 
+    <script>
+        function formatTimeAgoJS(isoString) {
+            if (!isoString) {
+                return "Never";
+            }
+            try {
+                const dt = new Date(isoString);
+                const now = new Date();
+                const diff = now.getTime() - dt.getTime(); // Difference in milliseconds
+
+                const seconds = Math.floor(diff / 1000);
+                if (seconds < 2) return "Just now";
+                if (seconds < 60) return `${seconds}s ago`;
+
+                const minutes = Math.floor(seconds / 60);
+                if (minutes < 60) return `${minutes}m ago`;
+
+                const hours = Math.floor(minutes / 60);
+                if (hours < 24) return `${hours}h ago`;
+
+                const days = Math.floor(hours / 24);
+                return `${days}d ago`;
+            } catch (e) {
+                console.error("Error parsing date:", isoString, e);
+                return "Invalid date";
+            }
+        }
+
+        function updateAllTimestamps() {
+            document.querySelectorAll('.metadata[data-timestamp]').forEach(el => {
+                const isoString = el.dataset.timestamp;
+                const timeAgoEl = el.querySelector('.time-ago');
+                if (timeAgoEl) {
+                    timeAgoEl.textContent = formatTimeAgoJS(isoString);
+                }
+            });
+        }
+
+        // Combined update function
+        function updateServiceDisplay(badgeId, spinnerId, lastCheckedId, serviceData) {
+            const badge = document.getElementById(badgeId);
+            const spinner = document.getElementById(spinnerId);
+            const lastCheckedEl = document.getElementById(lastCheckedId);
+
+            console.log(`Updating display for ${badgeId}. Data:`, serviceData);
+
+            if (!badge || !spinner || !lastCheckedEl) {
+                console.error(`Missing elements for ${badgeId}. Badge: ${!!badge}, Spinner: ${!!spinner}, Timestamp: ${!!lastCheckedEl}`);
+                return;
+            }
+
+            const status = serviceData.status;
+            const lastCheckedIso = serviceData.last_checked_iso; // Use ISO key
+
+            // Update last checked time first
+            // Store the raw timestamp on the element
+            lastCheckedEl.dataset.timestamp = lastCheckedIso || '';
+
+            // Update displayed text immediately using the new JS formatter
+            const timeAgoEl = lastCheckedEl.querySelector('.time-ago');
+            if (timeAgoEl) {
+                timeAgoEl.textContent = formatTimeAgoJS(lastCheckedIso);
+            } else {
+                console.error('Could not find .time-ago span within', lastCheckedEl);
+            }
+
+            // Handle spinner visibility and badge update
+            if (status === 'checking') {
+                spinner.style.display = 'inline-block'; // Show spinner
+                console.log(`Status is checking, showing spinner ${spinnerId}`);
+                // badge.style.opacity = '0.7'; // Optional dimming
+                return; // Don't update badge text/color while checking
+            } else {
+                console.log(`Status is NOT checking (${status}), attempting to hide spinner ${spinnerId}`);
+                spinner.style.display = 'none'; // Hide spinner for stable status
+                console.log(`Set display = 'none' for ${spinnerId}. Current display: ${spinner.style.display}`);
+                // badge.style.opacity = '1'; // Restore opacity
+
+                // Determine badge class and text based on stable status
+                let statusClass = 'status-unknown';
+                let statusText = status.split('(')[0].trim();
+
+                if (status === 'healthy') {
+                    statusClass = 'status-healthy';
+                } else if (status.startsWith('unhealthy')) {
+                    statusClass = 'status-unhealthy';
+                } else if (status.startsWith('error')) {
+                    statusClass = 'status-error';
+                } else if (status === 'disabled') {
+                    statusClass = 'status-disabled';
+                }
+
+                // Update badge appearance
+                badge.classList.remove('status-healthy', 'status-unhealthy', 'status-checking', 'status-error', 'status-unknown', 'status-disabled');
+                badge.classList.add(statusClass);
+                badge.title = status; // Update tooltip
+                badge.textContent = statusText;
+            }
+        }
+
+        function connectWebSocket() {
+            const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+            const wsUrl = `${wsProtocol}//${window.location.host}/ws/health_status`;
+            console.log(`Connecting WebSocket to ${wsUrl}`);
+            const socket = new WebSocket(wsUrl);
+
+            socket.onopen = function(event) {
+                console.log("WebSocket connection established.");
+            };
+
+            socket.onmessage = function(event) {
+                console.log("Raw WebSocket message received:", event.data); // Log raw data
+                try {
+                    const serviceDataMap = JSON.parse(event.data);
+                    console.log("Parsed status update:", serviceDataMap); // Log parsed object
+                    for (const path in serviceDataMap) {
+                        if (serviceDataMap.hasOwnProperty(path)) {
+                            console.log(`>>> Processing update for path: ${path}`); // Log path being processed
+                            const serviceData = serviceDataMap[path];
+                            // Generate IDs
+                            const safePath = path.replace(/\//g, '_').replace(/:/g, '_');
+                            const badgeId = 'status-badge-' + safePath;
+                            const spinnerId = 'spinner-for-' + safePath;
+                            const lastCheckedId = 'last-checked-' + safePath;
+                            // Update display using combined function
+                            updateServiceDisplay(badgeId, spinnerId, lastCheckedId, serviceData);
+                        }
+                    }
+                } catch (e) {
+                    console.error("Error parsing WebSocket message or updating display:", e);
+                }
+            };
+
+            socket.onerror = function(event) {
+                console.error("WebSocket error observed:", event);
+            };
+
+            socket.onclose = function(event) {
+                console.log("WebSocket connection closed. Attempting to reconnect in 5 seconds...");
+                setTimeout(connectWebSocket, 5000);
+            };
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            connectWebSocket();
+            // Initial timestamp update based on data-* attributes set by Jinja
+            updateAllTimestamps();
+            // Set interval to update timestamps periodically
+            setInterval(updateAllTimestamps, 5000); // Update every 5 seconds
+        });
+    </script>
+
+    <!-- Add Theme Toggle Script -->
+    <script>
+        const themeToggleButton = document.getElementById('theme-toggle');
+        const currentTheme = localStorage.getItem('theme');
+        const prefersDarkQuery = window.matchMedia('(prefers-color-scheme: dark)');
+
+        // Function to update button icon based on theme
+        function updateToggleButtonIcon(theme) {
+            console.log("Updating button icon for theme:", theme);
+            themeToggleButton.textContent = theme === 'dark' ? '🌙' : '☀️'; // Moon for dark, Sun for light
+        }
+
+        const initialTheme = currentTheme || (prefersDarkQuery.matches ? 'dark' : 'dark');
+        console.log("Initial theme:", initialTheme, "(From storage:", currentTheme, ", Prefers dark:", prefersDarkQuery.matches, ")");
+        updateToggleButtonIcon(initialTheme); // Set initial icon
+
+        themeToggleButton.addEventListener('click', () => {
+            // Toggle class directly
+            document.documentElement.classList.toggle('dark-mode');
+            // Determine new theme based on class presence
+            let newTheme = document.documentElement.classList.contains('dark-mode') ? 'dark' : 'light';
+            console.log("Theme toggled. New theme:", newTheme);
+
+            // Determine new theme and save to localStorage
+            localStorage.setItem('theme', newTheme);
+
+            // Update button icon
+            updateToggleButtonIcon(newTheme);
+        });
+
+        prefersDarkQuery.addEventListener('change', event => {
+            if (!localStorage.getItem('theme')) {
+                const newColorScheme = event.matches ? "dark" : "light";
+                console.log("System theme changed to:", newColorScheme);
+                document.documentElement.classList.toggle('dark-mode', event.matches);
+                updateToggleButtonIcon(newColorScheme); // Update button icon
+            }
+        });
+    </script>
 </body>
 </html> 
