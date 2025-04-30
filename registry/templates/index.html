@@ -57,8 +57,10 @@
                     <div class="service-card">
                         <div class="card-header">
                             <h2>{{ service.display_name }}</h2>
-                            <span class="official-badge">official</span>
-                            <span class="icons">☁️ 💻 🔄</span>
+                            <div class="header-right-items">
+                                <span class="official-badge">official</span>
+                                <span class="icons">☁️ 💻 🔄</span>
+                            </div>
                         </div>
                         <div class="card-body">
                             <p class="owner">Path: {{ service.path }}</p>
@@ -77,6 +79,7 @@
                                 </label>
                                 <span class="toggle-label">{{ 'Enabled' if service.is_enabled else 'Disabled' }}</span>
                             </form>
+                            <a href="/edit{{ service.path }}" class="edit-button" style="margin-top: 10px;">Modify</a>
                         </div>
                         <div class="card-footer">
                             <span class="metadata">🕒 Last updated: Just now (Simulated)</span>

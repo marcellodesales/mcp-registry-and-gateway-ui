@@ -25,6 +25,7 @@ NGINX_CONFIG_PATH = (
 SERVERS_DIR = BASE_DIR / "servers"  # Directory to store individual server JSON files
 STATIC_DIR = BASE_DIR / "static"
 TEMPLATES_DIR = BASE_DIR / "templates"
+NGINX_TEMPLATE_PATH = BASE_DIR / "nginx_template.conf" # Path to the template
 
 # In-memory state store
 REGISTERED_SERVERS = {}
@@ -40,50 +41,72 @@ SESSION_COOKIE_NAME = "mcp_gateway_session"
 signer = URLSafeTimedSerializer(SECRET_KEY)
 SESSION_MAX_AGE_SECONDS = 60 * 60 * 8  # 8 hours
 
-# --- Helper Functions for Reading Config/State (Adapted) ---
+# --- Nginx Config Generation ---
 
+LOCATION_BLOCK_TEMPLATE = """
+    location {path} {{
+        proxy_pass {proxy_pass_url};
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    }}
+"""
 
-def get_nginx_config_content():
+COMMENTED_LOCATION_BLOCK_TEMPLATE = """
+#    location {path} {{
+#        proxy_pass {proxy_pass_url};
+#        proxy_http_version 1.1;
+#        proxy_set_header Host $host;
+#        proxy_set_header X-Real-IP $remote_addr;
+#        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+#    }}
+"""
+
+def regenerate_nginx_config():
+    """Generates the nginx config file based on registered servers and their state."""
+    print(f"Regenerating Nginx config at {NGINX_CONFIG_PATH}...")
     try:
-        with open(NGINX_CONFIG_PATH, "r") as f:
-            return f.readlines()
+        with open(NGINX_TEMPLATE_PATH, 'r') as f_template:
+            template_content = f_template.read()
+
+        location_blocks = []
+        sorted_paths = sorted(REGISTERED_SERVERS.keys())
+
+        for path in sorted_paths:
+            server_info = REGISTERED_SERVERS[path]
+            proxy_url = server_info.get("proxy_pass_url")
+            is_enabled = MOCK_SERVICE_STATE.get(path, False) # Default to disabled if state unknown
+
+            if not proxy_url:
+                print(f"Warning: Skipping server '{server_info['server_name']}' ({path}) - missing proxy_pass_url.")
+                continue
+
+            if is_enabled:
+                block = LOCATION_BLOCK_TEMPLATE.format(
+                    path=path,
+                    proxy_pass_url=proxy_url
+                )
+            else:
+                block = COMMENTED_LOCATION_BLOCK_TEMPLATE.format(
+                    path=path,
+                    proxy_pass_url=proxy_url
+                )
+            location_blocks.append(block)
+
+        final_config = template_content.replace("# {{LOCATION_BLOCKS}}", "\n".join(location_blocks))
+
+        with open(NGINX_CONFIG_PATH, 'w') as f_out:
+            f_out.write(final_config)
+        print("Nginx config regeneration successful.")
+        return True
+
+    except FileNotFoundError:
+        print(f"ERROR: Nginx template file not found at {NGINX_TEMPLATE_PATH}")
+        return False
     except Exception as e:
-        print(
-            f"Warning: Could not read Nginx config {NGINX_CONFIG_PATH} for initial state: {e}"
-        )
-        return None
-
-
-def find_location_block(lines, service_path):
-    start_line, end_line, brace_count, in_block = -1, -1, 0, False
-    pattern = re.compile(r"^\s*(#?\s*location\s+" + re.escape(service_path) + r"\s*\{)")
-    if not lines:
-        return -1, -1
-    for i, line in enumerate(lines):
-        if start_line == -1:
-            match = pattern.match(line)
-            if match:
-                start_line, in_block = i, True
-                brace_count += line.count("{") - line.count("}")
-                if brace_count == 0:
-                    end_line = i
-                    break
-        elif in_block:
-            brace_count += line.count("{") - line.count("}")
-            if brace_count <= 0:
-                end_line = i
-                break
-    return start_line, end_line
-
-
-def get_initial_enabled_state_from_nginx(service_path, nginx_lines):
-    if not nginx_lines:
+        print(f"ERROR: Failed to regenerate Nginx config: {e}")
         return False
-    start_line, _ = find_location_block(nginx_lines, service_path)
-    if start_line == -1:
-        return False
-    return not nginx_lines[start_line].strip().startswith("#")
-
 
 # --- Helper function to normalize a path to a filename ---
 def path_to_filename(path):
@@ -134,6 +157,7 @@ def load_registered_servers_and_state():
                     server_info["num_stars"] = server_info.get("num_stars", 0)
                     server_info["is_python"] = server_info.get("is_python", False)
                     server_info["license"] = server_info.get("license", "N/A")
+                    server_info["proxy_pass_url"] = server_info.get("proxy_pass_url", None)
 
                     temp_servers[server_path] = server_info
                 else:
@@ -152,14 +176,12 @@ def load_registered_servers_and_state():
         f"Successfully loaded {len(REGISTERED_SERVERS)} servers from individual files."
     )
 
-    # Refresh mock state based on loaded servers and current Nginx config state
-    print("Initializing/refreshing mock service state based on Nginx config...")
-    MOCK_SERVICE_STATE = {}
-    nginx_lines = get_nginx_config_content()
-    for path in REGISTERED_SERVERS.keys():
-        MOCK_SERVICE_STATE[path] = get_initial_enabled_state_from_nginx(
-            path, nginx_lines
-        )
+    # Initialize mock state (Default to disabled unless state is restored elsewhere)
+    # We no longer read Nginx config to get the initial state.
+    # State should ideally be persisted or default to disabled on startup.
+    print("Initializing mock service state (defaulting to disabled)...")
+    MOCK_SERVICE_STATE = {path: False for path in REGISTERED_SERVERS.keys()}
+    # TODO: Consider loading initial state from a persistent store if needed
     print(f"Initial mock state: {MOCK_SERVICE_STATE}")
 
 
@@ -191,6 +213,7 @@ def save_server_to_file(server_info):
 async def lifespan(app: FastAPI):
     print("Running startup tasks...")
     load_registered_servers_and_state()
+    regenerate_nginx_config() # Generate config after loading state
     yield
     print("Running shutdown tasks...")
 
@@ -353,12 +376,20 @@ async def toggle_service_route(
         service_path = "/" + service_path
     if service_path not in REGISTERED_SERVERS:
         raise HTTPException(status_code=404, detail="Service path not registered")
+
     new_state = enabled == "on"
     MOCK_SERVICE_STATE[service_path] = new_state
     server_name = REGISTERED_SERVERS[service_path]["server_name"]
     print(
         f"Simulated toggle for '{server_name}' ({service_path}) to {new_state} by user '{username}'"
     )
+
+    # Regenerate Nginx config after toggling state
+    if not regenerate_nginx_config():
+        # Handle error - maybe return an error response or just log it
+        print("ERROR: Failed to update Nginx configuration after toggle.")
+        # Consider raising an HTTPException or returning a specific error response
+
     query_param = request.query_params.get("query", "")
     redirect_url = f"/?query={query_param}" if query_param else "/"
     return RedirectResponse(url=redirect_url, status_code=status.HTTP_303_SEE_OTHER)
@@ -369,11 +400,12 @@ async def register_service(
     name: Annotated[str, Form()],
     description: Annotated[str, Form()],
     path: Annotated[str, Form()],
-    tags: Annotated[str, Form()] = "",  # Receive tags as comma-separated string
+    proxy_pass_url: Annotated[str, Form()],
+    tags: Annotated[str, Form()] = "",
     num_tools: Annotated[int, Form()] = 0,
     num_stars: Annotated[int, Form()] = 0,
     is_python: Annotated[bool, Form()] = False,
-    license_str: Annotated[str, Form(alias="license")] = "N/A",  # Use alias for license
+    license_str: Annotated[str, Form(alias="license")] = "N/A",
     username: Annotated[str, Depends(api_auth)] = None,
 ):
     # Ensure path starts with a slash
@@ -395,6 +427,7 @@ async def register_service(
         "server_name": name,
         "description": description,
         "path": path,
+        "proxy_pass_url": proxy_pass_url,
         "tags": tag_list,
         "num_tools": num_tools,
         "num_stars": num_stars,
@@ -413,12 +446,119 @@ async def register_service(
     REGISTERED_SERVERS[path] = server_entry
     MOCK_SERVICE_STATE[path] = False
 
+    # Regenerate Nginx config after successful registration
+    if not regenerate_nginx_config():
+        # Handle error - registration succeeded but config generation failed.
+        # Maybe log the error but still return success for registration?
+        print("ERROR: Failed to update Nginx configuration after registration.")
+        # Consider adding a warning to the response
+
     print(f"New service registered: '{name}' at path '{path}' by user '{username}'")
 
     return JSONResponse(
         status_code=201,
-        content={"message": "Service registered successfully", "service": server_entry},
+        content={
+            "message": "Service registered successfully",
+            "service": server_entry,
+            # Optional: Add a warning if config generation failed
+            # "warning": "Nginx configuration update failed, please check logs."
+        },
     )
+
+
+@app.get("/api/server_details/{service_path:path}")
+async def get_server_details(
+    service_path: str,
+    username: Annotated[str, Depends(api_auth)]
+):
+    if not service_path.startswith('/'):
+        service_path = '/' + service_path
+    
+    server_info = REGISTERED_SERVERS.get(service_path)
+    if not server_info:
+        raise HTTPException(status_code=404, detail="Service path not registered")
+    
+    # Return the full server info, including proxy_pass_url
+    return server_info
+
+
+# --- Add Edit Routes ---
+
+@app.get("/edit/{service_path:path}", response_class=HTMLResponse)
+async def edit_server_form(
+    request: Request, 
+    service_path: str, 
+    username: Annotated[str, Depends(get_current_user)] # Require login
+):
+    if not service_path.startswith('/'):
+        service_path = '/' + service_path
+
+    server_info = REGISTERED_SERVERS.get(service_path)
+    if not server_info:
+        raise HTTPException(status_code=404, detail="Service path not found")
+    
+    return templates.TemplateResponse(
+        "edit_server.html", 
+        {"request": request, "server": server_info, "username": username}
+    )
+
+@app.post("/edit/{service_path:path}")
+async def edit_server_submit(
+    service_path: str, 
+    # Required Form fields
+    name: Annotated[str, Form()], 
+    proxy_pass_url: Annotated[str, Form()], 
+    # Dependency
+    username: Annotated[str, Depends(get_current_user)], 
+    # Optional Form fields
+    description: Annotated[str, Form()] = "", 
+    tags: Annotated[str, Form()] = "", 
+    num_tools: Annotated[int, Form()] = 0, 
+    num_stars: Annotated[int, Form()] = 0, 
+    is_python: Annotated[bool | None, Form()] = False,  
+    license_str: Annotated[str, Form(alias="license")] = "N/A", 
+):
+    if not service_path.startswith('/'):
+        service_path = '/' + service_path
+
+    # Check if the server exists
+    if service_path not in REGISTERED_SERVERS:
+        raise HTTPException(status_code=404, detail="Service path not found")
+
+    # Process tags
+    tag_list = [tag.strip() for tag in tags.split(',') if tag.strip()]
+
+    # Prepare updated server data (keeping original path)
+    updated_server_entry = {
+        "server_name": name,
+        "description": description,
+        "path": service_path, # Keep original path
+        "proxy_pass_url": proxy_pass_url,
+        "tags": tag_list,
+        "num_tools": num_tools,
+        "num_stars": num_stars,
+        "is_python": bool(is_python), # Convert checkbox value
+        "license": license_str,
+    }
+
+    # Save updated data to file
+    success = save_server_to_file(updated_server_entry)
+    if not success:
+        # Optionally render form again with an error message
+        raise HTTPException(status_code=500, detail="Failed to save updated server data")
+
+    # Update in-memory registry
+    REGISTERED_SERVERS[service_path] = updated_server_entry
+
+    # Regenerate Nginx config as proxy_pass_url might have changed
+    if not regenerate_nginx_config():
+        print("ERROR: Failed to update Nginx configuration after edit.")
+        # Consider how to notify user - maybe flash message system needed
+
+    print(f"Server '{name}' ({service_path}) updated by user '{username}'")
+
+    # Redirect back to the main page
+    return RedirectResponse(url="/", status_code=status.HTTP_303_SEE_OTHER)
 
 
 # --- Run (for local testing) ---
