@@ -462,7 +462,7 @@ async def perform_single_health_check(path: str) -> tuple[str, datetime | None]:
         return "error: server not registered", None
 
     url = server_info.get("proxy_pass_url")
-    # Removed previous_status fetching from here as it's now at the top
+    is_enabled = MOCK_SERVICE_STATE.get(path, False) # Get enabled state for later check
 
     # --- Record check time ---
     last_checked_time = datetime.now(timezone.utc)
@@ -473,6 +473,11 @@ async def perform_single_health_check(path: str) -> tuple[str, datetime | None]:
         current_status = "error: missing URL"
         SERVER_HEALTH_STATUS[path] = current_status
         print(f"Health check skipped for {path}: Missing URL.")
+        # --- Regenerate Nginx if status affecting it changed --- START
+        if is_enabled and previous_status == "healthy": # Was healthy, now isn't (due to missing URL)
+             print(f"Status changed from healthy for {path}, regenerating Nginx config...")
+             regenerate_nginx_config()
+        # --- Regenerate Nginx if status affecting it changed --- END
         return current_status, last_checked_time
 
     # Update status to 'checking' before performing the check
@@ -506,9 +511,14 @@ async def perform_single_health_check(path: str) -> tuple[str, datetime | None]:
             print(f"Health check successful for {path} ({url}).")
 
             # --- Check for transition to healthy state --- START
+            # Note: Tool list fetching moved inside the status transition check
             if previous_status != "healthy":
-                print(f"Service {path} transitioned to healthy. Attempting to fetch tool list...")
-                # Ensure url is not None before attempting connection
+                print(f"Service {path} transitioned to healthy. Regenerating Nginx config and fetching tool list...")
+                 # --- Regenerate Nginx on transition TO healthy --- START
+                regenerate_nginx_config()
+                 # --- Regenerate Nginx on transition TO healthy --- END
+
+                # Ensure url is not None before attempting connection (redundant check as url is checked above, but safe)
                 if url:
                     tool_list = await get_tools_from_server(url) # Get the list of dicts
 
@@ -536,6 +546,7 @@ async def perform_single_health_check(path: str) -> tuple[str, datetime | None]:
                     else:
                         print(f"Failed to retrieve tool list for healthy service {path}. List/Count remains unchanged.")
                 else:
+                    # This case should technically not be reachable due to earlier url check
                     print(f"Cannot fetch tool list for {path}: proxy_pass_url is missing.")
             # --- Check for transition to healthy state --- END
 
@@ -571,6 +582,19 @@ async def perform_single_health_check(path: str) -> tuple[str, datetime | None]:
     SERVER_HEALTH_STATUS[path] = current_status
     print(f"Final health status for {path}: {current_status}")
 
+    # --- Regenerate Nginx if status affecting it changed --- START
+    # Check if the service is enabled AND its Nginx-relevant status changed
+    if is_enabled:
+        if previous_status == "healthy" and current_status != "healthy":
+            print(f"Status changed FROM healthy for enabled service {path}, regenerating Nginx config...")
+            regenerate_nginx_config()
+        # Regeneration on transition TO healthy is handled within the proc.returncode == 0 block above
+        # elif previous_status != "healthy" and current_status == "healthy":
+        #     print(f"Status changed TO healthy for {path}, regenerating Nginx config...")
+        #     regenerate_nginx_config() # Already handled above
+    # --- Regenerate Nginx if status affecting it changed --- END
+
+
     return current_status, last_checked_time
 
 
@@ -582,12 +606,19 @@ async def run_health_checks():
         paths_to_check = list(REGISTERED_SERVERS.keys())
         needs_broadcast = False # Flag to check if any status actually changed
 
+        # --- Use a copy of MOCK_SERVICE_STATE for stable iteration --- START
+        current_enabled_state = MOCK_SERVICE_STATE.copy()
+        # --- Use a copy of MOCK_SERVICE_STATE for stable iteration --- END
+
         for path in paths_to_check:
             if path not in REGISTERED_SERVERS: # Check if server was removed during the loop
                 continue
 
-            is_enabled = MOCK_SERVICE_STATE.get(path, False)
-            previous_status = SERVER_HEALTH_STATUS.get(path) # Get status before check cycle
+            # --- Use copied state for check --- START
+            # is_enabled = MOCK_SERVICE_STATE.get(path, False)
+            is_enabled = current_enabled_state.get(path, False)
+            # --- Use copied state for check --- END
+            previous_status = SERVER_HEALTH_STATUS.get(path)
 
             if not is_enabled:
                 new_status = "disabled"
@@ -634,21 +665,61 @@ async def run_health_checks():
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     print("Running startup tasks...")
-    load_registered_servers_and_state() # Loads servers, initializes health status
-    # --- Initialize health status based on enabled state --- START
-    global SERVER_HEALTH_STATUS
+    # 1. Load server definitions and persisted enabled/disabled state
+    load_registered_servers_and_state()
+
+    # 2. Perform initial health checks concurrently for *enabled* services
+    print("Performing initial health checks for enabled services...")
+    initial_check_tasks = []
+    enabled_paths = [path for path, is_enabled in MOCK_SERVICE_STATE.items() if is_enabled]
+
+    global SERVER_HEALTH_STATUS, SERVER_LAST_CHECK_TIME
+    # Initialize status for all servers (defaults for disabled)
     for path in REGISTERED_SERVERS.keys():
         SERVER_LAST_CHECK_TIME[path] = None # Initialize last check time
-        if MOCK_SERVICE_STATE.get(path, False):
-            SERVER_HEALTH_STATUS[path] = "checking" # Check enabled services
+        if path not in enabled_paths:
+             SERVER_HEALTH_STATUS[path] = "disabled"
         else:
-            SERVER_HEALTH_STATUS[path] = "disabled" # Mark disabled services
-    print(f"Initialized health status based on enabled state: {SERVER_HEALTH_STATUS}")
-    # --- Initialize health status based on enabled state --- END
-    regenerate_nginx_config() # Generate config after loading state
+             # Will be set by the check task below (or remain unset if check fails badly)
+             SERVER_HEALTH_STATUS[path] = "checking" # Tentative status before check runs
+
+    print(f"Initially enabled services to check: {enabled_paths}")
+    if enabled_paths:
+        for path in enabled_paths:
+            # Create a task for each enabled service check
+            task = asyncio.create_task(perform_single_health_check(path))
+            initial_check_tasks.append(task)
+
+        # Wait for all initial checks to complete
+        results = await asyncio.gather(*initial_check_tasks, return_exceptions=True)
+
+        # Log results/errors from initial checks
+        for i, result in enumerate(results):
+            path = enabled_paths[i]
+            if isinstance(result, Exception):
+                print(f"ERROR during initial health check for {path}: {result}")
+                # Status might have already been set to an error state within the check function
+            else:
+                status, _ = result # Unpack the result tuple
+                print(f"Initial health check completed for {path}: Status = {status}")
+    else:
+        print("No services are initially enabled.")
+
+    print(f"Initial health status after checks: {SERVER_HEALTH_STATUS}")
+
+    # 3. Generate Nginx config *after* initial checks are done
+    print("Generating initial Nginx configuration...")
+    regenerate_nginx_config() # Generate config based on initial health status
+
+    # 4. Start the background periodic health check task
     print("Starting background health check task...")
     health_check_task = asyncio.create_task(run_health_checks())
+
+    # --- Yield to let the application run --- START
     yield
+    # --- Yield to let the application run --- END
+
+    # --- Shutdown tasks --- START
     print("Running shutdown tasks...")
     print("Cancelling background health check task...")
     health_check_task.cancel()
@@ -656,6 +727,7 @@ async def lifespan(app: FastAPI):
         await health_check_task
     except asyncio.CancelledError:
         print("Health check task cancelled successfully.")
+    # --- Shutdown tasks --- END
 
 
 app = FastAPI(lifespan=lifespan)
@@ -1082,6 +1154,12 @@ async def refresh_service(service_path: str, username: Annotated[str, Depends(ap
     try:
         # Trigger the health check (which also updates tools if healthy)
         await perform_single_health_check(service_path)
+        # --- Regenerate Nginx config after manual refresh --- START
+        # The health check itself might trigger regeneration, but do it explicitly
+        # here too to ensure it happens after the refresh attempt completes.
+        print(f"Regenerating Nginx config after manual refresh for {service_path}...")
+        regenerate_nginx_config()
+        # --- Regenerate Nginx config after manual refresh --- END
     except Exception as e:
         # Catch potential errors during the check itself
         print(f"ERROR during manual refresh check for {service_path}: {e}")
@@ -1091,6 +1169,11 @@ async def refresh_service(service_path: str, username: Annotated[str, Depends(ap
         SERVER_LAST_CHECK_TIME[service_path] = datetime.now(timezone.utc)
         # Still broadcast the error state
         await broadcast_single_service_update(service_path)
+        # --- Regenerate Nginx config even after refresh failure --- START
+        # Ensure Nginx reflects the error state if it was previously healthy
+        print(f"Regenerating Nginx config after manual refresh failed for {service_path}...")
+        regenerate_nginx_config()
+        # --- Regenerate Nginx config even after refresh failure --- END
         # Return error response
         raise HTTPException(status_code=500, detail=f"Refresh check failed: {e}")
 
