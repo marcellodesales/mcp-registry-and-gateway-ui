@@ -155,17 +155,20 @@ def regenerate_nginx_config():
             server_info = REGISTERED_SERVERS[path]
             proxy_url = server_info.get("proxy_pass_url")
             is_enabled = MOCK_SERVICE_STATE.get(path, False) # Default to disabled if state unknown
+            health_status = SERVER_HEALTH_STATUS.get(path) # Get current health status
 
             if not proxy_url:
                 print(f"Warning: Skipping server '{server_info['server_name']}' ({path}) - missing proxy_pass_url.")
                 continue
 
-            if is_enabled:
+            # Only create an active block if the service is enabled AND healthy
+            if is_enabled and health_status == "healthy":
                 block = LOCATION_BLOCK_TEMPLATE.format(
                     path=path,
                     proxy_pass_url=proxy_url
                 )
             else:
+                # Comment out the block if disabled OR not healthy
                 block = COMMENTED_LOCATION_BLOCK_TEMPLATE.format(
                     path=path,
                     proxy_pass_url=proxy_url
@@ -459,7 +462,7 @@ async def perform_single_health_check(path: str) -> tuple[str, datetime | None]:
         return "error: server not registered", None
 
     url = server_info.get("proxy_pass_url")
-    # Removed previous_status fetching from here as it's now at the top
+    is_enabled = MOCK_SERVICE_STATE.get(path, False) # Get enabled state for later check
 
     # --- Record check time ---
     last_checked_time = datetime.now(timezone.utc)
@@ -470,6 +473,11 @@ async def perform_single_health_check(path: str) -> tuple[str, datetime | None]:
         current_status = "error: missing URL"
         SERVER_HEALTH_STATUS[path] = current_status
         print(f"Health check skipped for {path}: Missing URL.")
+        # --- Regenerate Nginx if status affecting it changed --- START
+        if is_enabled and previous_status == "healthy": # Was healthy, now isn't (due to missing URL)
+             print(f"Status changed from healthy for {path}, regenerating Nginx config...")
+             regenerate_nginx_config()
+        # --- Regenerate Nginx if status affecting it changed --- END
         return current_status, last_checked_time
 
     # Update status to 'checking' before performing the check
@@ -503,9 +511,14 @@ async def perform_single_health_check(path: str) -> tuple[str, datetime | None]:
             print(f"Health check successful for {path} ({url}).")
 
             # --- Check for transition to healthy state --- START
+            # Note: Tool list fetching moved inside the status transition check
             if previous_status != "healthy":
-                print(f"Service {path} transitioned to healthy. Attempting to fetch tool list...")
-                # Ensure url is not None before attempting connection
+                print(f"Service {path} transitioned to healthy. Regenerating Nginx config and fetching tool list...")
+                 # --- Regenerate Nginx on transition TO healthy --- START
+                regenerate_nginx_config()
+                 # --- Regenerate Nginx on transition TO healthy --- END
+
+                # Ensure url is not None before attempting connection (redundant check as url is checked above, but safe)
                 if url:
                     tool_list = await get_tools_from_server(url) # Get the list of dicts
 
@@ -533,6 +546,7 @@ async def perform_single_health_check(path: str) -> tuple[str, datetime | None]:
                     else:
                         print(f"Failed to retrieve tool list for healthy service {path}. List/Count remains unchanged.")
                 else:
+                    # This case should technically not be reachable due to earlier url check
                     print(f"Cannot fetch tool list for {path}: proxy_pass_url is missing.")
             # --- Check for transition to healthy state --- END
 
@@ -568,6 +582,19 @@ async def perform_single_health_check(path: str) -> tuple[str, datetime | None]:
     SERVER_HEALTH_STATUS[path] = current_status
     print(f"Final health status for {path}: {current_status}")
 
+    # --- Regenerate Nginx if status affecting it changed --- START
+    # Check if the service is enabled AND its Nginx-relevant status changed
+    if is_enabled:
+        if previous_status == "healthy" and current_status != "healthy":
+            print(f"Status changed FROM healthy for enabled service {path}, regenerating Nginx config...")
+            regenerate_nginx_config()
+        # Regeneration on transition TO healthy is handled within the proc.returncode == 0 block above
+        # elif previous_status != "healthy" and current_status == "healthy":
+        #     print(f"Status changed TO healthy for {path}, regenerating Nginx config...")
+        #     regenerate_nginx_config() # Already handled above
+    # --- Regenerate Nginx if status affecting it changed --- END
+
+
     return current_status, last_checked_time
 
 
@@ -579,12 +606,19 @@ async def run_health_checks():
         paths_to_check = list(REGISTERED_SERVERS.keys())
         needs_broadcast = False # Flag to check if any status actually changed
 
+        # --- Use a copy of MOCK_SERVICE_STATE for stable iteration --- START
+        current_enabled_state = MOCK_SERVICE_STATE.copy()
+        # --- Use a copy of MOCK_SERVICE_STATE for stable iteration --- END
+
         for path in paths_to_check:
             if path not in REGISTERED_SERVERS: # Check if server was removed during the loop
                 continue
 
-            is_enabled = MOCK_SERVICE_STATE.get(path, False)
-            previous_status = SERVER_HEALTH_STATUS.get(path) # Get status before check cycle
+            # --- Use copied state for check --- START
+            # is_enabled = MOCK_SERVICE_STATE.get(path, False)
+            is_enabled = current_enabled_state.get(path, False)
+            # --- Use copied state for check --- END
+            previous_status = SERVER_HEALTH_STATUS.get(path)
 
             if not is_enabled:
                 new_status = "disabled"
@@ -631,21 +665,61 @@ async def run_health_checks():
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     print("Running startup tasks...")
-    load_registered_servers_and_state() # Loads servers, initializes health status
-    # --- Initialize health status based on enabled state --- START
-    global SERVER_HEALTH_STATUS
+    # 1. Load server definitions and persisted enabled/disabled state
+    load_registered_servers_and_state()
+
+    # 2. Perform initial health checks concurrently for *enabled* services
+    print("Performing initial health checks for enabled services...")
+    initial_check_tasks = []
+    enabled_paths = [path for path, is_enabled in MOCK_SERVICE_STATE.items() if is_enabled]
+
+    global SERVER_HEALTH_STATUS, SERVER_LAST_CHECK_TIME
+    # Initialize status for all servers (defaults for disabled)
     for path in REGISTERED_SERVERS.keys():
         SERVER_LAST_CHECK_TIME[path] = None # Initialize last check time
-        if MOCK_SERVICE_STATE.get(path, False):
-            SERVER_HEALTH_STATUS[path] = "checking" # Check enabled services
+        if path not in enabled_paths:
+             SERVER_HEALTH_STATUS[path] = "disabled"
         else:
-            SERVER_HEALTH_STATUS[path] = "disabled" # Mark disabled services
-    print(f"Initialized health status based on enabled state: {SERVER_HEALTH_STATUS}")
-    # --- Initialize health status based on enabled state --- END
-    regenerate_nginx_config() # Generate config after loading state
+             # Will be set by the check task below (or remain unset if check fails badly)
+             SERVER_HEALTH_STATUS[path] = "checking" # Tentative status before check runs
+
+    print(f"Initially enabled services to check: {enabled_paths}")
+    if enabled_paths:
+        for path in enabled_paths:
+            # Create a task for each enabled service check
+            task = asyncio.create_task(perform_single_health_check(path))
+            initial_check_tasks.append(task)
+
+        # Wait for all initial checks to complete
+        results = await asyncio.gather(*initial_check_tasks, return_exceptions=True)
+
+        # Log results/errors from initial checks
+        for i, result in enumerate(results):
+            path = enabled_paths[i]
+            if isinstance(result, Exception):
+                print(f"ERROR during initial health check for {path}: {result}")
+                # Status might have already been set to an error state within the check function
+            else:
+                status, _ = result # Unpack the result tuple
+                print(f"Initial health check completed for {path}: Status = {status}")
+    else:
+        print("No services are initially enabled.")
+
+    print(f"Initial health status after checks: {SERVER_HEALTH_STATUS}")
+
+    # 3. Generate Nginx config *after* initial checks are done
+    print("Generating initial Nginx configuration...")
+    regenerate_nginx_config() # Generate config based on initial health status
+
+    # 4. Start the background periodic health check task
     print("Starting background health check task...")
     health_check_task = asyncio.create_task(run_health_checks())
+
+    # --- Yield to let the application run --- START
     yield
+    # --- Yield to let the application run --- END
+
+    # --- Shutdown tasks --- START
     print("Running shutdown tasks...")
     print("Cancelling background health check task...")
     health_check_task.cancel()
@@ -653,6 +727,7 @@ async def lifespan(app: FastAPI):
         await health_check_task
     except asyncio.CancelledError:
         print("Health check task cancelled successfully.")
+    # --- Shutdown tasks --- END
 
 
 app = FastAPI(lifespan=lifespan)
@@ -906,9 +981,28 @@ async def toggle_service_route(
     if not regenerate_nginx_config():
         print("ERROR: Failed to update Nginx configuration after toggle.")
 
-    query_param = request.query_params.get("query", "")
-    redirect_url = f"/?query={query_param}" if query_param else "/"
-    return RedirectResponse(url=redirect_url, status_code=status.HTTP_303_SEE_OTHER)
+    # --- Return JSON instead of Redirect --- START
+    final_status = SERVER_HEALTH_STATUS.get(service_path, "unknown")
+    final_last_checked_dt = SERVER_LAST_CHECK_TIME.get(service_path)
+    final_last_checked_iso = final_last_checked_dt.isoformat() if final_last_checked_dt else None
+    final_num_tools = REGISTERED_SERVERS.get(service_path, {}).get("num_tools", 0)
+
+    return JSONResponse(
+        status_code=200,
+        content={
+            "message": f"Toggle request for {service_path} processed.",
+            "service_path": service_path,
+            "new_enabled_state": new_state, # The state it was set to
+            "status": final_status, # The status after potential immediate check
+            "last_checked_iso": final_last_checked_iso,
+            "num_tools": final_num_tools
+        }
+    )
+    # --- Return JSON instead of Redirect --- END
+
+    # query_param = request.query_params.get("query", "")
+    # redirect_url = f"/?query={query_param}" if query_param else "/"
+    # return RedirectResponse(url=redirect_url, status_code=status.HTTP_303_SEE_OTHER)
 
 
 @app.post("/register")
@@ -1041,6 +1135,66 @@ async def get_service_tools(
 # --- Endpoint to get tool list for a service --- END
 
 
+# --- Refresh Endpoint --- START
+@app.post("/api/refresh/{service_path:path}")
+async def refresh_service(service_path: str, username: Annotated[str, Depends(api_auth)]):
+    if not service_path.startswith('/'):
+        service_path = '/' + service_path
+
+    # Check if service exists
+    if service_path not in REGISTERED_SERVERS:
+        raise HTTPException(status_code=404, detail="Service path not registered")
+
+    # Check if service is enabled
+    is_enabled = MOCK_SERVICE_STATE.get(service_path, False)
+    if not is_enabled:
+        raise HTTPException(status_code=400, detail="Cannot refresh a disabled service")
+
+    print(f"Manual refresh requested for {service_path} by user '{username}'...")
+    try:
+        # Trigger the health check (which also updates tools if healthy)
+        await perform_single_health_check(service_path)
+        # --- Regenerate Nginx config after manual refresh --- START
+        # The health check itself might trigger regeneration, but do it explicitly
+        # here too to ensure it happens after the refresh attempt completes.
+        print(f"Regenerating Nginx config after manual refresh for {service_path}...")
+        regenerate_nginx_config()
+        # --- Regenerate Nginx config after manual refresh --- END
+    except Exception as e:
+        # Catch potential errors during the check itself
+        print(f"ERROR during manual refresh check for {service_path}: {e}")
+        # Update status to reflect the error
+        error_status = f"error: refresh execution failed ({type(e).__name__})"
+        SERVER_HEALTH_STATUS[service_path] = error_status
+        SERVER_LAST_CHECK_TIME[service_path] = datetime.now(timezone.utc)
+        # Still broadcast the error state
+        await broadcast_single_service_update(service_path)
+        # --- Regenerate Nginx config even after refresh failure --- START
+        # Ensure Nginx reflects the error state if it was previously healthy
+        print(f"Regenerating Nginx config after manual refresh failed for {service_path}...")
+        regenerate_nginx_config()
+        # --- Regenerate Nginx config even after refresh failure --- END
+        # Return error response
+        raise HTTPException(status_code=500, detail=f"Refresh check failed: {e}")
+
+    # Check completed, broadcast the latest status
+    await broadcast_single_service_update(service_path)
+
+    # Return the latest status from global state
+    final_status = SERVER_HEALTH_STATUS.get(service_path, "unknown")
+    final_last_checked_dt = SERVER_LAST_CHECK_TIME.get(service_path)
+    final_last_checked_iso = final_last_checked_dt.isoformat() if final_last_checked_dt else None
+    final_num_tools = REGISTERED_SERVERS.get(service_path, {}).get("num_tools", 0)
+
+    return {
+        "service_path": service_path,
+        "status": final_status,
+        "last_checked_iso": final_last_checked_iso,
+        "num_tools": final_num_tools
+    }
+# --- Refresh Endpoint --- END
+
+
 # --- Add Edit Routes ---
 
 @app.get("/edit/{service_path:path}", response_class=HTMLResponse)
@@ -1118,6 +1272,51 @@ async def edit_server_submit(
 
     # Redirect back to the main page
     return RedirectResponse(url="/", status_code=status.HTTP_303_SEE_OTHER)
+
+
+# --- Helper function to broadcast single service update --- START
+async def broadcast_single_service_update(service_path: str):
+    """Sends the current status, tool count, and last check time for a specific service."""
+    global active_connections, SERVER_HEALTH_STATUS, SERVER_LAST_CHECK_TIME, REGISTERED_SERVERS
+
+    if not active_connections:
+        return # No clients connected
+
+    status = SERVER_HEALTH_STATUS.get(service_path, "unknown")
+    last_checked_dt = SERVER_LAST_CHECK_TIME.get(service_path)
+    last_checked_iso = last_checked_dt.isoformat() if last_checked_dt else None
+    num_tools = REGISTERED_SERVERS.get(service_path, {}).get("num_tools", 0)
+
+    update_data = {
+        service_path: {
+            "status": status,
+            "last_checked_iso": last_checked_iso,
+            "num_tools": num_tools
+        }
+    }
+    message = json.dumps(update_data)
+    print(f"--- BROADCAST SINGLE: Sending update for {service_path}: {message}")
+
+    # Use the same concurrent sending logic as in toggle
+    disconnected_clients = set()
+    current_connections = list(active_connections) # Copy to iterate safely
+    send_tasks = []
+    for conn in current_connections:
+        send_tasks.append((conn, conn.send_text(message)))
+
+    results = await asyncio.gather(*(task for _, task in send_tasks), return_exceptions=True)
+
+    for i, result in enumerate(results):
+        conn, _ = send_tasks[i]
+        if isinstance(result, Exception):
+            print(f"Error sending single update to WebSocket client {conn.client}: {result}. Marking for removal.")
+            disconnected_clients.add(conn)
+    if disconnected_clients:
+        print(f"Removing {len(disconnected_clients)} disconnected clients after single update broadcast.")
+        for conn in disconnected_clients:
+            if conn in active_connections:
+                active_connections.remove(conn)
+# --- Helper function to broadcast single service update --- END
 
 
 # --- WebSocket Endpoint ---

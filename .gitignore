@@ -173,3 +173,7 @@ cython_debug/
 # PyPI configuration file
 .pypirc
 cookies.txt
+
+# MCP Gateway specific
+registry/server_state.json
+registry/nginx_mcp_revproxy.conf
