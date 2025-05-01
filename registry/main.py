@@ -155,17 +155,20 @@ def regenerate_nginx_config():
             server_info = REGISTERED_SERVERS[path]
             proxy_url = server_info.get("proxy_pass_url")
             is_enabled = MOCK_SERVICE_STATE.get(path, False) # Default to disabled if state unknown
+            health_status = SERVER_HEALTH_STATUS.get(path) # Get current health status
 
             if not proxy_url:
                 print(f"Warning: Skipping server '{server_info['server_name']}' ({path}) - missing proxy_pass_url.")
                 continue
 
-            if is_enabled:
+            # Only create an active block if the service is enabled AND healthy
+            if is_enabled and health_status == "healthy":
                 block = LOCATION_BLOCK_TEMPLATE.format(
                     path=path,
                     proxy_pass_url=proxy_url
                 )
             else:
+                # Comment out the block if disabled OR not healthy
                 block = COMMENTED_LOCATION_BLOCK_TEMPLATE.format(
                     path=path,
                     proxy_pass_url=proxy_url
@@ -906,9 +909,28 @@ async def toggle_service_route(
     if not regenerate_nginx_config():
         print("ERROR: Failed to update Nginx configuration after toggle.")
 
-    query_param = request.query_params.get("query", "")
-    redirect_url = f"/?query={query_param}" if query_param else "/"
-    return RedirectResponse(url=redirect_url, status_code=status.HTTP_303_SEE_OTHER)
+    # --- Return JSON instead of Redirect --- START
+    final_status = SERVER_HEALTH_STATUS.get(service_path, "unknown")
+    final_last_checked_dt = SERVER_LAST_CHECK_TIME.get(service_path)
+    final_last_checked_iso = final_last_checked_dt.isoformat() if final_last_checked_dt else None
+    final_num_tools = REGISTERED_SERVERS.get(service_path, {}).get("num_tools", 0)
+
+    return JSONResponse(
+        status_code=200,
+        content={
+            "message": f"Toggle request for {service_path} processed.",
+            "service_path": service_path,
+            "new_enabled_state": new_state, # The state it was set to
+            "status": final_status, # The status after potential immediate check
+            "last_checked_iso": final_last_checked_iso,
+            "num_tools": final_num_tools
+        }
+    )
+    # --- Return JSON instead of Redirect --- END
+
+    # query_param = request.query_params.get("query", "")
+    # redirect_url = f"/?query={query_param}" if query_param else "/"
+    # return RedirectResponse(url=redirect_url, status_code=status.HTTP_303_SEE_OTHER)
 
 
 @app.post("/register")

@@ -634,9 +634,16 @@
             const badge = document.getElementById(badgeId);
             const spinner = document.getElementById(spinnerId);
             const lastCheckedEl = document.getElementById(lastCheckedId);
-            const safePath = badgeId.replace('status-badge-', ''); // Used for num_tools and refresh button
+            const safePath = badgeId.replace('status-badge-', ''); // Used for num_tools, refresh button, toggle
             const numToolsId = 'num-tools-' + safePath;
             const numToolsEl = document.getElementById(numToolsId);
+
+            // --- Add IDs for toggle elements --- START
+            const toggleCheckId = 'toggle-check-' + safePath;
+            const toggleLabelId = 'toggle-label-' + safePath;
+            const toggleCheckbox = document.getElementById(toggleCheckId);
+            const toggleLabelSpan = document.getElementById(toggleLabelId);
+            // --- Add IDs for toggle elements --- END
 
             // console.log(`Updating display for ${badgeId}. Data:`, serviceData);
 
@@ -647,6 +654,14 @@
              if (!numToolsEl) {
                 console.error(`Missing num_tools element with ID: ${numToolsId}`);
             }
+            // --- Check if toggle elements exist --- START
+            if (!toggleCheckbox) {
+                 console.warn(`Missing toggle checkbox element with ID: ${toggleCheckId}`);
+            }
+            if (!toggleLabelSpan) {
+                 console.warn(`Missing toggle label span element with ID: ${toggleLabelId}`);
+            }
+            // --- Check if toggle elements exist --- END
 
             const status = serviceData.status;
             const lastCheckedIso = serviceData.last_checked_iso;
@@ -710,6 +725,16 @@
             } catch (e) {
                 console.error("[updateServiceDisplay] Error finding or updating refresh button state:", e);
             }
+
+            // --- Update Toggle Switch State and Label --- START
+            if (toggleCheckbox && toggleLabelSpan) {
+                const isCurrentlyEnabled = (status !== 'disabled');
+                toggleCheckbox.checked = isCurrentlyEnabled;
+                toggleLabelSpan.textContent = isCurrentlyEnabled ? 'Enabled' : 'Disabled';
+                // Ensure checkbox is re-enabled after potential async operations complete
+                toggleCheckbox.disabled = false;
+            }
+            // --- Update Toggle Switch State and Label --- END
         }
 
         function updateSidebarStats(currentServiceDataMap) {
@@ -1080,17 +1105,67 @@
         // == Event Handlers
         // =====================================================================
 
-        function handleToggleClick(checkboxElement, servicePath) {
-             console.log(`Toggle clicked for path: ${servicePath}`);
-             const safePath = servicePath.replace(/\//g, '_').replace(/:/g, '_');
-             const spinnerId = 'spinner-for-' + safePath;
-             const spinner = document.getElementById(spinnerId);
-             if (spinner) {
-                 spinner.style.display = 'inline-block'; // Show spinner immediately
-             } else {
-                 console.warn(`Spinner element not found for ID: ${spinnerId}`);
-             }
-             checkboxElement.form.submit(); // Submit the form
+        async function handleToggleClick(event, checkboxElement, servicePath) {
+            event.preventDefault(); // Prevent default form submission
+            console.log(`Toggle clicked for path: ${servicePath}`);
+
+            const safePath = servicePath.replace(/^\//, '').replace(/\//g, '_').replace(/:/g, '_');
+            const spinnerId = 'spinner-for-' + safePath;
+            const spinner = document.getElementById(spinnerId);
+            const form = checkboxElement.form;
+            const isEnabling = checkboxElement.checked; // The state the user wants to set
+
+            // Show spinner and disable checkbox immediately for feedback
+            if (spinner) {
+                spinner.style.display = 'inline-block';
+            } else {
+                console.warn(`Spinner element not found for ID: ${spinnerId}`);
+            }
+            checkboxElement.disabled = true;
+
+            // Prepare form data
+            const formData = new FormData();
+            if (isEnabling) {
+                formData.append('enabled', 'on');
+            }
+            // Note: No need to explicitly send 'enabled=off', the absence of 'enabled' param means false
+
+            try {
+                const response = await fetch(form.action, {
+                    method: 'POST',
+                    body: new URLSearchParams(formData) // Send as x-www-form-urlencoded
+                });
+
+                const responseData = await response.json(); // Always try to parse JSON
+
+                if (!response.ok) {
+                    // Log error from backend response if possible
+                    const errorMsg = responseData.detail || `HTTP error ${response.status}`;
+                    console.error(`Error toggling service ${servicePath}: ${errorMsg}`);
+                    alert(`Error toggling service: ${errorMsg}`);
+                    // Revert checkbox state on error? Maybe not, let WS handle the authoritative state.
+                } else {
+                    console.log(`Toggle request successful for ${servicePath}. Backend response:`, responseData);
+                    // Backend will trigger WebSocket update, which calls updateServiceDisplay
+                    // updateServiceDisplay will hide spinner, set correct checkbox state, label, etc.
+                }
+
+            } catch (error) {
+                console.error(`Network or fetch error toggling service ${servicePath}:`, error);
+                alert(`Failed to send toggle request: ${error}`);
+                // If fetch fails completely, maybe revert spinner/disable state here?
+                // But relying on WS might still be better for consistency.
+            } finally {
+                // Re-enable the checkbox ONLY IF the WS hasn't already done so
+                // updateServiceDisplay handles the definitive enabling/disabling and check state
+                // We might remove this re-enable here and solely rely on updateServiceDisplay.
+                // Let's test with it first. If double-enabling causes issues, remove this.
+                // Checkbox might still be disabled if WS update came through quickly.
+                // if (checkboxElement.disabled) {
+                //     checkboxElement.disabled = false;
+                // }
+                // Let's rely on updateServiceDisplay to manage the final enabled state.
+            }
         }
 
         async function handleRefreshClick(event) {
@@ -1152,7 +1227,6 @@
                 }, 300); // Small delay
             }
         }
-
 
         function handleThemeToggle() {
             const htmlElement = document.documentElement;
@@ -1428,13 +1502,20 @@
 
                             <div class="controls-row">
                                 <a href="/edit{{ service.path }}" class="edit-button">Modify</a>
+                                {# Add ID to form if needed, but action URL is sufficient #}
                                 <form action="/toggle{{ service.path }}" method="post" class="toggle-form">
                                     <label class="switch">
-                                        {# Call new JS function on change #}
-                                        <input type="checkbox" name="enabled" value="on" {% if service.is_enabled %}checked{% endif %} onchange="handleToggleClick(this, '{{ service.path }}')">
+                                        {# Pass event, element, and path; add ID to checkbox #}
+                                        <input type="checkbox" name="enabled" value="on"
+                                               id="{{ 'toggle-check-' + safe_path }}"
+                                               {% if service.is_enabled %}checked{% endif %}
+                                               onchange="handleToggleClick(event, this, '{{ service.path }}')">
                                         <span class="slider round"></span>
                                     </label>
-                                    <span class="toggle-label">{{ 'Enabled' if service.is_enabled else 'Disabled' }}</span>
+                                    {# Add ID to label span #}
+                                    <span id="{{ 'toggle-label-' + safe_path }}" class="toggle-label">
+                                        {{ 'Enabled' if service.is_enabled else 'Disabled' }}
+                                    </span>
                                 </form>
 
                             </div>
