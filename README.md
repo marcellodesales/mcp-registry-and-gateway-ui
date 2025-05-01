@@ -158,9 +158,6 @@ This application provides a web interface and API for registering and managing b
 
 *(Authentication via session cookie is required for most non-login routes)*
 
-## Key Dependencies
-
-<<<<<<< HEAD
 ```bash
 curl -X POST http://localhost:7860/register \
   -H "Content-Type: application/x-www-form-urlencoded" \
@@ -176,11 +173,3 @@ curl -X POST http://localhost:7860/register \
 *(Remember to replace the cookie value)*
 
 This will create a corresponding JSON file in `registry/servers/`. 
-=======
-*   FastAPI
-*   Uvicorn
-*   Jinja2
-*   python-dotenv
-*   itsdangerous (for session signing)
-*   mcp.py (MCP Client Library) 
->>>>>>> 812e383 (docs: Update README to include new api endpoints)
