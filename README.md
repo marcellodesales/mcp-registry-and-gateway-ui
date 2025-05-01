@@ -1,4 +1,4 @@
-<img src="registry/static/white_logo.png" alt="MCP Gateway Logo" width="100%">
+<img src="registry/static/mcp_gateway_horizontal_white_logo.png" alt="MCP Gateway Logo" width="80%">
 
 # ⚠️ ACTIVE DEVELOPMENT - WORK IN PROGRESS ⚠️
 
