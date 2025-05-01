@@ -26,6 +26,11 @@ from fastapi.templating import Jinja2Templates
 from itsdangerous import URLSafeTimedSerializer, SignatureExpired, BadSignature
 from dotenv import load_dotenv
 
+# --- MCP Client Imports --- START
+from mcp import ClientSession
+from mcp.client.sse import sse_client
+# --- MCP Client Imports --- END
+
 # Determine the base directory of this script (registry folder)
 BASE_DIR = Path(__file__).resolve().parent
 
@@ -63,10 +68,15 @@ async def broadcast_health_status():
             last_checked_dt = SERVER_LAST_CHECK_TIME.get(path)
             # Send ISO string or None
             last_checked_iso = last_checked_dt.isoformat() if last_checked_dt else None
+            # Get the current tool count from REGISTERED_SERVERS
+            num_tools = REGISTERED_SERVERS.get(path, {}).get("num_tools", 0) # Default to 0 if not found
+
             data_to_send[path] = {
                 "status": status,
-                "last_checked_iso": last_checked_iso # Changed key
+                "last_checked_iso": last_checked_iso, # Changed key
+                "num_tools": num_tools # --- Add num_tools --- START
             }
+            # --- Add num_tools --- END
 
         message = json.dumps(data_to_send)
 
@@ -226,6 +236,7 @@ def load_registered_servers_and_state():
                     server_info["is_python"] = server_info.get("is_python", False)
                     server_info["license"] = server_info.get("license", "N/A")
                     server_info["proxy_pass_url"] = server_info.get("proxy_pass_url", None)
+                    server_info["tool_list"] = server_info.get("tool_list", []) # Initialize tool_list if missing
 
                     temp_servers[server_path] = server_info
                 else:
@@ -318,18 +329,137 @@ def save_server_to_file(server_info):
         return False
 
 
+# --- MCP Client Function to Get Tool List --- START (Renamed)
+async def get_tools_from_server(base_url: str) -> List[dict] | None: # Return list of dicts
+    """
+    Connects to an MCP server via SSE, lists tools, and returns their details
+    (name, description, schema).
+
+    Args:
+        base_url: The base URL of the MCP server (e.g., http://localhost:8000).
+
+    Returns:
+        A list of tool detail dictionaries (keys: name, description, schema),
+        or None if connection/retrieval fails.
+    """
+    # Determine scheme and construct the full /sse URL
+    if not base_url:
+        print("MCP Check Error: Base URL is empty.")
+        return None
+
+    sse_url = base_url.rstrip('/') + "/sse"
+    # Simple check for https, might need refinement for edge cases
+    secure_prefix = "s" if sse_url.startswith("https://") else ""
+    mcp_server_url = f"http{secure_prefix}://{sse_url[len(f'http{secure_prefix}://'):]}" # Ensure correct format for sse_client
+
+
+    print(f"Attempting to connect to MCP server at {mcp_server_url} to get tool list...")
+    try:
+        # Connect using the sse_client context manager directly
+        async with sse_client(mcp_server_url) as (read, write):
+             # Use the ClientSession context manager directly
+            async with ClientSession(read, write, sampling_callback=None) as session:
+                # Apply timeout to individual operations within the session
+                await asyncio.wait_for(session.initialize(), timeout=10.0) # Timeout for initialize
+                tools_response = await asyncio.wait_for(session.list_tools(), timeout=15.0) # Renamed variable
+
+                # Extract tool details
+                tool_details_list = []
+                if tools_response and hasattr(tools_response, 'tools'):
+                    for tool in tools_response.tools:
+                        # Access attributes directly based on MCP documentation
+                        tool_name = getattr(tool, 'name', 'Unknown Name') # Direct attribute access
+                        tool_desc = getattr(tool, 'description', None) or getattr(tool, '__doc__', None)
+
+                        # --- Parse Docstring into Sections --- START
+                        parsed_desc = {
+                            "main": "No description available.",
+                            "args": None,
+                            "returns": None,
+                            "raises": None,
+                        }
+                        if tool_desc:
+                            tool_desc = tool_desc.strip()
+                            # Simple parsing logic (can be refined)
+                            lines = tool_desc.split('\n')
+                            main_desc_lines = []
+                            current_section = "main"
+                            section_content = []
+
+                            for line in lines:
+                                stripped_line = line.strip()
+                                if stripped_line.startswith("Args:"):
+                                    parsed_desc["main"] = "\n".join(main_desc_lines).strip()
+                                    current_section = "args"
+                                    section_content = [stripped_line[len("Args:"):].strip()]
+                                elif stripped_line.startswith("Returns:"):
+                                    if current_section != "main": parsed_desc[current_section] = "\n".join(section_content).strip()
+                                    else: parsed_desc["main"] = "\n".join(main_desc_lines).strip()
+                                    current_section = "returns"
+                                    section_content = [stripped_line[len("Returns:"):].strip()]
+                                elif stripped_line.startswith("Raises:"):
+                                    if current_section != "main": parsed_desc[current_section] = "\n".join(section_content).strip()
+                                    else: parsed_desc["main"] = "\n".join(main_desc_lines).strip()
+                                    current_section = "raises"
+                                    section_content = [stripped_line[len("Raises:"):].strip()]
+                                elif current_section == "main":
+                                    main_desc_lines.append(line.strip()) # Keep leading whitespace for main desc if intended
+                                else:
+                                    section_content.append(line.strip())
+
+                            # Add the last collected section
+                            if current_section != "main":
+                                parsed_desc[current_section] = "\n".join(section_content).strip()
+                            elif not parsed_desc["main"] and main_desc_lines: # Handle case where entire docstring was just main description
+                                parsed_desc["main"] = "\n".join(main_desc_lines).strip()
+
+                            # Ensure main description has content if others were parsed but main was empty
+                            if not parsed_desc["main"] and (parsed_desc["args"] or parsed_desc["returns"] or parsed_desc["raises"]):
+                                parsed_desc["main"] = "(No primary description provided)"
+
+                        else:
+                            parsed_desc["main"] = "No description available."
+                        # --- Parse Docstring into Sections --- END
+
+                        tool_schema = getattr(tool, 'inputSchema', {}) # Use inputSchema attribute
+
+                        tool_details_list.append({
+                            "name": tool_name,
+                            "parsed_description": parsed_desc, # Store parsed sections
+                            "schema": tool_schema
+                        })
+
+                print(f"Successfully retrieved details for {len(tool_details_list)} tools from {mcp_server_url}.")
+                return tool_details_list # Return the list of details
+    except asyncio.TimeoutError:
+        print(f"MCP Check Error: Timeout during session operation with {mcp_server_url}.")
+        return None
+    except ConnectionRefusedError:
+         print(f"MCP Check Error: Connection refused by {mcp_server_url}.")
+         return None
+    except Exception as e:
+        print(f"MCP Check Error: Failed to get tool list from {mcp_server_url}: {type(e).__name__} - {e}")
+        return None
+
+# --- MCP Client Function to Get Tool List --- END
+
+
 # --- Single Health Check Logic ---
 async def perform_single_health_check(path: str) -> tuple[str, datetime | None]:
     """Performs a health check for a single service path and updates global state."""
-    global SERVER_HEALTH_STATUS, SERVER_LAST_CHECK_TIME
+    global SERVER_HEALTH_STATUS, SERVER_LAST_CHECK_TIME, REGISTERED_SERVERS # Ensure REGISTERED_SERVERS is global
 
     server_info = REGISTERED_SERVERS.get(path)
+    # --- Store previous status --- START
+    previous_status = SERVER_HEALTH_STATUS.get(path) # Get status before check
+    # --- Store previous status --- END
+
     if not server_info:
         # Should not happen if called correctly, but handle defensively
         return "error: server not registered", None
 
     url = server_info.get("proxy_pass_url")
-    previous_status = SERVER_HEALTH_STATUS.get(path) # Get status before check
+    # Removed previous_status fetching from here as it's now at the top
 
     # --- Record check time ---
     last_checked_time = datetime.now(timezone.utc)
@@ -350,7 +480,12 @@ async def perform_single_health_check(path: str) -> tuple[str, datetime | None]:
         # Optional: Consider a targeted broadcast here if immediate 'checking' feedback is desired
         # await broadcast_specific_update(path, "checking", last_checked_time)
 
-    cmd = ['curl', '--head', '-s', '-f', '--max-time', str(HEALTH_CHECK_TIMEOUT_SECONDS), url]
+    # --- Append /sse to the health check URL --- START
+    health_check_url = url.rstrip('/') + "/sse"
+    # --- Append /sse to the health check URL --- END
+
+    # cmd = ['curl', '--head', '-s', '-f', '--max-time', str(HEALTH_CHECK_TIMEOUT_SECONDS), url]
+    cmd = ['curl', '--head', '-s', '-f', '--max-time', str(HEALTH_CHECK_TIMEOUT_SECONDS), health_check_url] # Use modified URL
     current_status = "checking" # Status will be updated below
 
     try:
@@ -366,6 +501,41 @@ async def perform_single_health_check(path: str) -> tuple[str, datetime | None]:
         if proc.returncode == 0:
             current_status = "healthy"
             print(f"Health check successful for {path} ({url}).")
+
+            # --- Check for transition to healthy state --- START
+            if previous_status != "healthy":
+                print(f"Service {path} transitioned to healthy. Attempting to fetch tool list...")
+                # Ensure url is not None before attempting connection
+                if url:
+                    tool_list = await get_tools_from_server(url) # Get the list of dicts
+
+                    if tool_list is not None: # Check if list retrieval was successful
+                        new_tool_count = len(tool_list)
+                        # Get current list (now list of dicts)
+                        current_tool_list = REGISTERED_SERVERS[path].get("tool_list", [])
+                        current_tool_count = REGISTERED_SERVERS[path].get("num_tools", 0)
+
+                        # Compare lists more carefully (simple set comparison won't work on dicts)
+                        # Convert to comparable format (e.g., sorted list of JSON strings)
+                        current_tool_list_str = sorted([json.dumps(t, sort_keys=True) for t in current_tool_list])
+                        new_tool_list_str = sorted([json.dumps(t, sort_keys=True) for t in tool_list])
+
+                        # if set(current_tool_list) != set(tool_list) or current_tool_count != new_tool_count:
+                        if current_tool_list_str != new_tool_list_str or current_tool_count != new_tool_count:
+                            print(f"Updating tool list for {path}. New count: {new_tool_count}.") # Simplified log
+                            REGISTERED_SERVERS[path]["tool_list"] = tool_list # Store the new list of dicts
+                            REGISTERED_SERVERS[path]["num_tools"] = new_tool_count # Update the count
+                            # Save the updated server info to its file
+                            if not save_server_to_file(REGISTERED_SERVERS[path]):
+                                print(f"ERROR: Failed to save updated tool list/count for {path} to file.")
+                        else:
+                             print(f"Tool list for {path} remains unchanged. No update needed.")
+                    else:
+                        print(f"Failed to retrieve tool list for healthy service {path}. List/Count remains unchanged.")
+                else:
+                    print(f"Cannot fetch tool list for {path}: proxy_pass_url is missing.")
+            # --- Check for transition to healthy state --- END
+
         elif proc.returncode == 28:
             current_status = f"error: timeout ({HEALTH_CHECK_TIMEOUT_SECONDS}s)"
             print(f"Health check timeout for {path} ({url})")
@@ -685,10 +855,14 @@ async def toggle_service_route(
 
     # --- Send *targeted* update via WebSocket --- START
     # Send immediate feedback for the toggled service only
+    # Always get the latest num_tools from the registry
+    current_num_tools = REGISTERED_SERVERS.get(service_path, {}).get("num_tools", 0)
+
     update_data = {
         service_path: {
             "status": new_status,
-            "last_checked_iso": last_checked_iso
+            "last_checked_iso": last_checked_iso,
+            "num_tools": current_num_tools # Include num_tools
         }
     }
     message = json.dumps(update_data)
@@ -775,6 +949,7 @@ async def register_service(
         "num_stars": num_stars,
         "is_python": is_python,
         "license": license_str,
+        "tool_list": [] # Initialize tool list
     }
 
     # Save to individual file
@@ -790,6 +965,9 @@ async def register_service(
     # Set initial health status for the new service (always start disabled)
     SERVER_HEALTH_STATUS[path] = "disabled" # Start disabled
     SERVER_LAST_CHECK_TIME[path] = None # No check time yet
+    # Ensure num_tools is present in the in-memory dict immediately
+    if "num_tools" not in REGISTERED_SERVERS[path]:
+        REGISTERED_SERVERS[path]["num_tools"] = 0
 
     # Regenerate Nginx config after successful registration
     if not regenerate_nginx_config():
@@ -834,6 +1012,33 @@ async def get_server_details(
     
     # Return the full server info, including proxy_pass_url
     return server_info
+
+
+# --- Endpoint to get tool list for a service --- START
+@app.get("/api/tools/{service_path:path}")
+async def get_service_tools(
+    service_path: str,
+    username: Annotated[str, Depends(api_auth)] # Requires authentication
+):
+    if not service_path.startswith('/'):
+        service_path = '/' + service_path
+
+    server_info = REGISTERED_SERVERS.get(service_path)
+    if not server_info:
+        raise HTTPException(status_code=404, detail="Service path not registered")
+
+    tool_list = server_info.get("tool_list") # Get the stored list
+
+    if tool_list is None:
+        # This might happen if the service hasn't become healthy yet
+        raise HTTPException(status_code=404, detail="Tool list not available yet. Service may not be healthy or check is pending.")
+    elif not isinstance(tool_list, list):
+         # Data integrity check
+        print(f"Warning: tool_list for {service_path} is not a list: {type(tool_list)}")
+        raise HTTPException(status_code=500, detail="Internal server error: Invalid tool list format.")
+
+    return {"service_path": service_path, "tools": tool_list}
+# --- Endpoint to get tool list for a service --- END
 
 
 # --- Add Edit Routes ---
@@ -928,10 +1133,15 @@ async def websocket_endpoint(websocket: WebSocket):
             last_checked_dt = SERVER_LAST_CHECK_TIME.get(path)
             # Send ISO string or None
             last_checked_iso = last_checked_dt.isoformat() if last_checked_dt else None
+            # Get the current tool count from REGISTERED_SERVERS
+            num_tools = REGISTERED_SERVERS.get(path, {}).get("num_tools", 0) # Default to 0 if not found
+
             initial_data_to_send[path] = {
                 "status": status,
-                "last_checked_iso": last_checked_iso # Changed key
+                "last_checked_iso": last_checked_iso,
+                "num_tools": num_tools # --- Add num_tools --- START
             }
+            # --- Add num_tools --- END
         await websocket.send_text(json.dumps(initial_data_to_send))
         # --- Send initial status upon connection (Formatted) --- END
 

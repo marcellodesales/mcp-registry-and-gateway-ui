@@ -4,6 +4,11 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>MCP Gateway - Servers (Test)</title>
+    <!-- Google Font Link (Inter) -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <!-- End Google Font Link -->
     <link rel="stylesheet" href="{{ url_for('static', path='/style.css') }}">
     <style>
         /* Keyframes for spinner animation */
@@ -68,6 +73,8 @@
         body {
             background-color: var(--bg-color);
             color: var(--text-color);
+            font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+            line-height: 1.6; /* Improve readability */
         }
         .main-header {
             background-color: var(--header-bg);
@@ -182,14 +189,14 @@
 
         /* Style for the separate spinner */
         .status-spinner {
-            display: none; /* Hidden by default */
+            /* display: none; /* Hidden by default - Let JS control this */
             width: 1.2em;
             height: 1.2em;
             border: 2px solid rgba(253, 126, 20, 0.3); /* Light orange base border */
             border-top-color: #fd7e14; /* Spinner color (Orange) */
             border-radius: 50%;
             vertical-align: middle;
-            display: inline-block;
+            display: inline-block; /* Keep inline-block for layout when visible */
             animation: spin 1s linear infinite;
             box-sizing: border-box;
             position: relative; /* Allow relative positioning */
@@ -268,6 +275,178 @@
              display: inline-block; /* Treat form like an inline block */
              vertical-align: middle;
         }
+
+        /* --- Tool List Modal Styles --- */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.6);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+        .modal-content {
+            background-color: var(--card-bg);
+            color: var(--text-color);
+            padding: 20px 30px;
+            border-radius: 8px;
+            min-width: 300px;
+            max-width: 600px;
+            max-height: 80vh;
+            overflow-y: auto;
+            position: relative;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+        }
+        .modal-close-button {
+            position: absolute;
+            top: 10px;
+            right: 15px;
+            font-size: 1.8em;
+            font-weight: bold;
+            color: var(--text-color);
+            cursor: pointer;
+            line-height: 1;
+        }
+        .modal-close-button:hover {
+            opacity: 0.7;
+        }
+        #tool-modal-list-container ul {
+            list-style: disc;
+            padding-left: 20px;
+            margin-top: 10px;
+        }
+        #tool-modal-list-container li {
+            margin-bottom: 5px;
+        }
+        /* --- Style for clickable tool icon --- */
+        .clickable-tool-icon {
+            cursor: pointer;
+            text-decoration: none; /* Remove underline if wrapped in <a> */
+        }
+        .clickable-tool-icon:hover {
+             opacity: 0.8;
+        }
+
+        /* --- Sidebar Toggle Styles --- */
+        .header-left {
+            display: flex;
+            align-items: center;
+        }
+        .sidebar-toggle-button {
+            /* Remove absolute positioning styles */
+            /* position: absolute; */
+            /* top: 10px; */
+            /* right: 10px; */
+            /* z-index: 10; */
+            background: none;
+            border: none;
+            color: var(--text-color);
+            font-size: 1.5em; /* Adjust size */
+            cursor: pointer;
+            /* Restore original padding/margin */
+            padding: 0 10px;
+            margin-right: 10px;
+        }
+        .sidebar-toggle-button:hover {
+            opacity: 0.7;
+        }
+
+        /* Collapsible Sidebar Styles */
+        .sidebar {
+            /* Remove relative positioning */
+            /* position: relative; */
+            width: 250px; /* Standard width */
+            transition: width 0.3s ease, padding 0.3s ease;
+            overflow-x: hidden; /* Prevent horizontal scrollbar during transition */
+            padding: 20px;
+            flex-shrink: 0; /* Prevent sidebar from shrinking smaller than width */
+        }
+        .content {
+            flex-grow: 1;
+            margin-left: 20px; /* Standard margin */
+            transition: margin-left 0.3s ease;
+            overflow-y: auto; /* Allow content to scroll independently */
+            padding-bottom: 20px; /* Ensure space at bottom */
+        }
+        /* Styles when collapsed */
+        body.sidebar-collapsed .sidebar {
+            width: 0; /* Collapse completely */
+            padding: 20px 0; /* Collapse padding horizontally */
+        }
+        body.sidebar-collapsed .content {
+            margin-left: 0; /* No margin when sidebar is 0 width */
+        }
+        /* Hide sidebar content */
+        body.sidebar-collapsed .sidebar > * {
+            visibility: hidden;
+            opacity: 0;
+            transition: visibility 0s 0.3s, opacity 0.3s ease; /* Delay hiding until width transition ends */
+        }
+        /* Make sidebar content visible again when expanded */
+        .sidebar > * {
+            visibility: visible;
+            opacity: 1;
+            transition: opacity 0.3s ease 0.1s; /* Fade in slightly delayed */
+        }
+
+        /* --- New Sidebar Content Styles --- */
+        .sidebar-section {
+            margin-bottom: 2em;
+        }
+        .sidebar-section h3 {
+            font-size: 0.9em;
+            font-weight: 600;
+            color: var(--input-placeholder); /* Use subtle color for heading */
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 0.8em;
+            padding-left: 10px; /* Align with links */
+        }
+        .sidebar-nav ul,
+        .sidebar-stats {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+        .sidebar-nav li,
+        .sidebar-stats li {
+            margin-bottom: 0.5em;
+        }
+        .sidebar-link {
+            display: block;
+            color: var(--text-color);
+            text-decoration: none;
+            padding: 8px 10px;
+            border-radius: 4px;
+            font-size: 0.95em;
+            transition: background-color 0.2s ease, color 0.2s ease;
+        }
+        .sidebar-link:hover {
+            background-color: var(--card-bg); /* Subtle hover */
+            color: var(--link-color); /* Highlight on hover */
+        }
+        .sidebar-link.active-filter {
+            background-color: rgba(13, 110, 253, 0.1); /* Light primary background for active */
+            color: var(--link-color);
+            font-weight: 600;
+        }
+        .sidebar-stats li {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.9em;
+            color: var(--text-color);
+            padding: 4px 10px;
+        }
+        .sidebar-stats span:first-child {
+            color: var(--input-placeholder); /* Dim label */
+        }
+        .sidebar-stats span:last-child {
+            font-weight: 600;
+        }
     </style>
     <script>
         // Immediately invoked function to apply theme before rendering
@@ -287,17 +466,493 @@
                 console.log('[HEAD SCRIPT] Ensured dark-mode class removed.');
             }
         })();
+
+        document.addEventListener('DOMContentLoaded', () => {
+            connectWebSocket();
+            // Initial timestamp update based on data-* attributes set by Jinja
+            updateAllTimestamps();
+            // Set interval to update timestamps periodically
+            // setInterval(updateAllTimestamps, 5000); // REMOVED periodic update
+        });
+
+        function formatTimeAgoJS(isoString) {
+            if (!isoString) {
+                console.log('[formatTimeAgoJS] Input is null/empty, returning "Never"');
+                return "Never";
+            }
+            console.log(`[formatTimeAgoJS] Formatting: ${isoString}`);
+            try {
+                const dt = new Date(isoString);
+                // Check if the date is valid after parsing
+                if (isNaN(dt.getTime())) {
+                    console.error(`[formatTimeAgoJS] Invalid Date parsed from: ${isoString}`);
+                    return "Invalid date";
+                }
+
+                const now = new Date();
+                const diff = now.getTime() - dt.getTime(); // Difference in milliseconds
+
+                const seconds = Math.floor(diff / 1000);
+                if (seconds < 2) return "Just now";
+                if (seconds < 60) return `${seconds}s ago`;
+
+                const minutes = Math.floor(seconds / 60);
+                if (minutes < 60) return `${minutes}m ago`;
+
+                const hours = Math.floor(minutes / 60);
+                if (hours < 24) return `${hours}h ago`;
+
+                const days = Math.floor(hours / 24);
+                return `${days}d ago`;
+            } catch (e) {
+                console.error("Error parsing date:", isoString, e);
+                return "Invalid date";
+            }
+        }
+
+        function updateAllTimestamps() {
+            document.querySelectorAll('.metadata[data-timestamp]').forEach(el => {
+                const isoString = el.dataset.timestamp;
+                const timeAgoEl = el.querySelector('.time-ago');
+                if (timeAgoEl) {
+                    const formattedTime = formatTimeAgoJS(isoString);
+                    // console.log(`[updateAllTimestamps] Updating ${el.id || 'element'} with data ${isoString} to: ${formattedTime}`);
+                    timeAgoEl.textContent = formattedTime;
+                } else {
+                    console.error('[updateAllTimestamps] Could not find .time-ago span within', el);
+                }
+            });
+        }
+
+        // Combined update function
+        function updateServiceDisplay(badgeId, spinnerId, lastCheckedId, serviceData) {
+            const badge = document.getElementById(badgeId);
+            const spinner = document.getElementById(spinnerId);
+            const lastCheckedEl = document.getElementById(lastCheckedId);
+            // --- Get num_tools element ID --- START
+            const safePath = badgeId.replace('status-badge-', ''); // Derive safePath from badgeId
+            const numToolsId = 'num-tools-' + safePath;
+            const numToolsEl = document.getElementById(numToolsId);
+            // --- Get num_tools element ID --- END
+
+            console.log(`Updating display for ${badgeId}. Data:`, serviceData);
+
+            if (!badge || !spinner || !lastCheckedEl) {
+                console.error(`Missing elements for ${badgeId}. Badge: ${!!badge}, Spinner: ${!!spinner}, Timestamp: ${!!lastCheckedEl}`);
+                return;
+            }
+            // --- Also check if numToolsEl exists --- START
+            if (!numToolsEl) {
+                console.error(`Missing num_tools element with ID: ${numToolsId}`);
+                // Decide if you want to return here or continue updating other parts
+            }
+            // --- Also check if numToolsEl exists --- END
+
+            const status = serviceData.status;
+            const lastCheckedIso = serviceData.last_checked_iso; // Use ISO key
+            const numTools = serviceData.num_tools; // --- Get num_tools from data --- START
+
+            // Update last checked time first
+            console.log(`[updateServiceDisplay] Received lastCheckedIso: ${lastCheckedIso} for ${lastCheckedId}`);
+            // Store the raw timestamp on the element
+            lastCheckedEl.dataset.timestamp = lastCheckedIso || '';
+
+            // Update displayed text immediately using the new JS formatter
+            const timeAgoEl = lastCheckedEl.querySelector('.time-ago');
+            if (timeAgoEl) {
+                const formattedTime = formatTimeAgoJS(lastCheckedIso);
+                console.log(`[updateServiceDisplay] Attempting to set .time-ago text for ${lastCheckedId} to: ${formattedTime}`); // Log before setting
+                timeAgoEl.textContent = formattedTime;
+                // Add log immediately after setting to verify
+                console.log(`[updateServiceDisplay] AFTER SET: textContent of ${lastCheckedId}'s .time-ago span is now:`, timeAgoEl.textContent);
+            } else {
+                console.error('[updateServiceDisplay] Could not find .time-ago span within', lastCheckedEl);
+            }
+
+            // --- Update Num Tools Display --- START
+            if (numToolsEl && numTools !== undefined && numTools !== null) {
+                numToolsEl.textContent = `🔧 ${numTools}`;
+            }
+            // --- Update Num Tools Display --- END
+        }
+
+        // --- Tool Modal Functions --- START
+        // Variables will be fetched inside the functions when needed
+
+        async function showToolModal(servicePath, serviceName) {
+            // Fetch elements when the function is called
+            const toolModal = document.getElementById('tool-modal');
+            const toolModalTitle = document.getElementById('tool-modal-title');
+            const toolModalListContainer = document.getElementById('tool-modal-list-container');
+
+            if (!toolModal || !toolModalTitle || !toolModalListContainer) {
+                console.error("Tool modal elements not found!");
+                return;
+            }
+
+            // Update title and show loading state
+            toolModalTitle.textContent = `Tools for ${serviceName}`;
+            toolModalListContainer.innerHTML = '<p>Loading...</p>';
+            toolModal.style.display = 'flex';
+
+            try {
+                // Ensure servicePath starts with /
+                const apiPath = servicePath.startsWith('/') ? servicePath : '/' + servicePath;
+                const response = await fetch(`/api/tools${apiPath}`);
+
+                toolModalListContainer.innerHTML = ''; // Clear loading/previous content
+
+                if (!response.ok) {
+                    let errorMsg = `Error fetching tools: ${response.status} ${response.statusText}`;
+                    try {
+                         // Try to get more specific error from backend JSON
+                         const errorData = await response.json();
+                         errorMsg = errorData.detail || errorMsg;
+                    } catch(e) { /* Ignore if response wasn't JSON */ }
+                    throw new Error(errorMsg);
+                }
+
+                const data = await response.json();
+                const tools = data.tools; // Expecting list of objects
+
+                if (tools && tools.length > 0) {
+                    // Instead of ul, use a div container for more structure
+                    // const ul = document.createElement('ul');
+                    tools.forEach(tool => {
+                        const toolDiv = document.createElement('div');
+                        toolDiv.style.marginBottom = '15px'; // Add spacing between tools
+                        toolDiv.style.borderBottom = '1px solid var(--card-border)'; // Separator
+                        toolDiv.style.paddingBottom = '10px';
+
+                        const nameEl = document.createElement('h4');
+                        nameEl.textContent = tool.name || 'Unnamed Tool';
+                        nameEl.style.marginTop = '0';
+                        nameEl.style.marginBottom = '5px';
+                        toolDiv.appendChild(nameEl);
+
+                        if (tool.description) {
+                            const descEl = document.createElement('p');
+                            descEl.textContent = tool.description;
+                            descEl.style.fontSize = '0.9em';
+                            descEl.style.marginBottom = '8px';
+                            toolDiv.appendChild(descEl);
+                        }
+
+                        // --- Render Parsed Description --- START
+                        if (tool.parsed_description) {
+                            const mainDescEl = document.createElement('p');
+                            mainDescEl.textContent = tool.parsed_description.main || 'No description available.';
+                            mainDescEl.style.whiteSpace = 'pre-wrap'; // Respect newlines in main description
+                            toolDiv.appendChild(mainDescEl);
+
+                            if (tool.parsed_description.args) {
+                                const argsTitle = document.createElement('strong');
+                                argsTitle.textContent = 'Args:';
+                                argsTitle.style.display = 'block';
+                                argsTitle.style.marginTop = '8px';
+                                toolDiv.appendChild(argsTitle);
+                                const argsPre = document.createElement('pre');
+                                argsPre.textContent = tool.parsed_description.args;
+                                argsPre.style.marginLeft = '10px';
+                                argsPre.style.marginTop = '3px';
+                                argsPre.style.whiteSpace = 'pre-wrap';
+                                argsPre.style.fontSize = '0.9em';
+                                toolDiv.appendChild(argsPre);
+                            }
+                            if (tool.parsed_description.returns) {
+                                const returnsTitle = document.createElement('strong');
+                                returnsTitle.textContent = 'Returns:';
+                                returnsTitle.style.display = 'block';
+                                returnsTitle.style.marginTop = '8px';
+                                toolDiv.appendChild(returnsTitle);
+                                const returnsPre = document.createElement('pre');
+                                returnsPre.textContent = tool.parsed_description.returns;
+                                returnsPre.style.marginLeft = '10px';
+                                returnsPre.style.marginTop = '3px';
+                                returnsPre.style.whiteSpace = 'pre-wrap';
+                                returnsPre.style.fontSize = '0.9em';
+                                toolDiv.appendChild(returnsPre);
+                            }
+                            if (tool.parsed_description.raises) {
+                                const raisesTitle = document.createElement('strong');
+                                raisesTitle.textContent = 'Raises:';
+                                raisesTitle.style.display = 'block';
+                                raisesTitle.style.marginTop = '8px';
+                                toolDiv.appendChild(raisesTitle);
+                                const raisesPre = document.createElement('pre');
+                                raisesPre.textContent = tool.parsed_description.raises;
+                                raisesPre.style.marginLeft = '10px';
+                                raisesPre.style.marginTop = '3px';
+                                raisesPre.style.whiteSpace = 'pre-wrap';
+                                raisesPre.style.fontSize = '0.9em';
+                                toolDiv.appendChild(raisesPre);
+                            }
+                        } else if (tool.description) { // Fallback to raw description if parsing failed or wasn't applicable
+                            const descEl = document.createElement('p');
+                            descEl.textContent = tool.description;
+                            descEl.style.marginBottom = '8px';
+                            toolDiv.appendChild(descEl);
+                        }
+                        // --- Render Parsed Description --- END
+
+                        if (tool.schema && typeof tool.schema === 'object' && Object.keys(tool.schema).length > 0) {
+                            const schemaContainer = document.createElement('div');
+                            schemaContainer.style.marginTop = '10px';
+
+                            const schemaTitle = document.createElement('strong');
+                            schemaTitle.textContent = 'Input Schema:';
+                            schemaContainer.appendChild(schemaTitle);
+
+                            const properties = tool.schema.properties;
+                            const required = tool.schema.required || [];
+
+                            if (properties && typeof properties === 'object' && Object.keys(properties).length > 0) {
+                                const propsList = document.createElement('div'); // Use div instead of ul
+                                propsList.style.marginLeft = '15px';
+                                propsList.style.marginTop = '5px';
+                                propsList.style.borderLeft = '2px solid var(--card-border)';
+                                propsList.style.paddingLeft = '10px';
+
+                                for (const [propName, propDetails] of Object.entries(properties)) {
+                                    const propDiv = document.createElement('div');
+                                    propDiv.style.marginBottom = '8px';
+
+                                    const nameSpan = document.createElement('strong');
+                                    nameSpan.textContent = propName;
+                                    propDiv.appendChild(nameSpan);
+
+                                    if (required.includes(propName)) {
+                                        const requiredSpan = document.createElement('span');
+                                        requiredSpan.textContent = ' (required)';
+                                        requiredSpan.style.color = '#dc3545'; // Red color for required
+                                        requiredSpan.style.fontSize = '0.8em';
+                                        requiredSpan.style.marginLeft = '3px';
+                                        propDiv.appendChild(requiredSpan);
+                                    }
+
+                                    if (propDetails.type) {
+                                        const typeSpan = document.createElement('span');
+                                        typeSpan.textContent = ` - Type: ${propDetails.type}`;
+                                        typeSpan.style.color = 'var(--input-placeholder)'; // Use a subtle color
+                                        typeSpan.style.marginLeft = '5px';
+                                        propDiv.appendChild(typeSpan);
+                                    }
+
+                                    if (propDetails.description) {
+                                        const descP = document.createElement('p');
+                                        descP.textContent = propDetails.description;
+                                        descP.style.margin = '3px 0 0 10px';
+                                        descP.style.fontSize = '0.85em';
+                                        propDiv.appendChild(descP);
+                                    }
+
+                                    if (propDetails.default !== undefined) {
+                                        const defaultP = document.createElement('p');
+                                        defaultP.textContent = `Default: ${JSON.stringify(propDetails.default)}`;
+                                        defaultP.style.margin = '3px 0 0 10px';
+                                        defaultP.style.fontSize = '0.85em';
+                                        defaultP.style.color = 'var(--input-placeholder)';
+                                        propDiv.appendChild(defaultP);
+                                    }
+
+                                    // Add more details like enum, items, etc. if needed
+
+                                    propsList.appendChild(propDiv);
+                                }
+                                schemaContainer.appendChild(propsList);
+                            } else {
+                                const noParams = document.createElement('p');
+                                noParams.textContent = 'No input parameters defined.';
+                                noParams.style.marginLeft = '15px';
+                                noParams.style.fontStyle = 'italic';
+                                schemaContainer.appendChild(noParams);
+                            }
+
+                            // Optionally display $defs if present
+                            if (tool.schema.$defs && Object.keys(tool.schema.$defs).length > 0) {
+                                const defsContainer = document.createElement('div');
+                                defsContainer.style.marginTop = '10px';
+                                defsContainer.innerHTML = '<strong>Definitions:</strong> (Schema uses shared definitions not fully displayed here)';
+                                defsContainer.style.fontSize = '0.8em';
+                                defsContainer.style.color = 'var(--input-placeholder)';
+                                schemaContainer.appendChild(defsContainer);
+                            }
+
+                            toolDiv.appendChild(schemaContainer);
+                        } else if (tool.schema && Object.keys(tool.schema).length === 0){
+                             // Handle case where schema is an empty object {}
+                            const schemaContainer = document.createElement('div');
+                            schemaContainer.style.marginTop = '10px';
+                            schemaContainer.innerHTML = '<strong>Input Schema:</strong> No parameters defined.';
+                            schemaContainer.style.fontStyle = 'italic';
+                            toolDiv.appendChild(schemaContainer);
+                        }
+                        // Remove the old <pre><code> block logic
+                        /*
+                        if (tool.schema && typeof tool.schema === 'object' && Object.keys(tool.schema).length > 0) {
+                            // ... existing <pre><code> block ...
+                        }
+                        */
+                        toolModalListContainer.appendChild(toolDiv);
+                    });
+                    // toolModalListContainer.appendChild(ul);
+                } else {
+                    toolModalListContainer.innerHTML = '<p>No tools listed for this service.</p>';
+                }
+
+            } catch (error) {
+                console.error("Failed to fetch or display tools:", error);
+                toolModalListContainer.innerHTML = `<p style="color: red;">Could not load tools: ${error.message}</p>`;
+            }
+        }
+
+        function closeToolModal() {
+            // Fetch elements when the function is called
+            const toolModal = document.getElementById('tool-modal');
+            const toolModalListContainer = document.getElementById('tool-modal-list-container'); // Also needed here if clearing content
+
+            if (toolModal) {
+                toolModal.style.display = 'none';
+                // Optional: Clear content when closing
+                if (toolModalListContainer) {
+                    toolModalListContainer.innerHTML = '';
+                }
+            }
+        }
+
+        // Add event listener for closing modal on overlay click in DOMContentLoaded
+        document.addEventListener('DOMContentLoaded', () => {
+            // --- Sidebar Toggle Logic --- START
+            const sidebarToggleButton = document.getElementById('sidebar-toggle');
+            const bodyElement = document.body;
+            const sidebarStateKey = 'sidebarCollapsed';
+
+            // Check localStorage for saved state
+            if (localStorage.getItem(sidebarStateKey) === 'true') {
+                bodyElement.classList.add('sidebar-collapsed');
+            }
+
+            if (sidebarToggleButton) {
+                sidebarToggleButton.addEventListener('click', () => {
+                    bodyElement.classList.toggle('sidebar-collapsed');
+                    // Save current state to localStorage
+                    const isCollapsed = bodyElement.classList.contains('sidebar-collapsed');
+                    localStorage.setItem(sidebarStateKey, isCollapsed);
+                    console.log(`Sidebar toggled. Collapsed: ${isCollapsed}`);
+                });
+            }
+            // --- Sidebar Toggle Logic --- END
+
+            // Ensure all functions above are defined before calling them
+            connectWebSocket();
+            updateAllTimestamps(); // Initial format based on Jinja render
+
+            const toolModalOverlay = document.getElementById('tool-modal');
+            if (toolModalOverlay) {
+                 toolModalOverlay.addEventListener('click', function(event) {
+                    // Check if the click was directly on the overlay (event.target)
+                    // and not on the content area (modal-content) or its children
+                    if (event.target === toolModalOverlay) {
+                        closeToolModal();
+                    }
+                });
+            }
+        });
+        // --- Tool Modal Functions --- END
+
+        // --- Toggle Click Handler --- START
+        function handleToggleClick(checkboxElement, servicePath) {
+             console.log(`Toggle clicked for path: ${servicePath}`);
+             // Construct spinner ID
+             const safePath = servicePath.replace(/\//g, '_').replace(/:/g, '_');
+             const spinnerId = 'spinner-for-' + safePath;
+             const spinner = document.getElementById(spinnerId);
+
+             // Show spinner immediately
+             if (spinner) {
+                 console.log(`Showing spinner ${spinnerId} on toggle click.`);
+                 spinner.style.display = 'inline-block';
+             } else {
+                 console.warn(`Spinner element not found for ID: ${spinnerId}`);
+             }
+
+             // Submit the form to trigger backend action
+             checkboxElement.form.submit();
+        }
+        // --- Toggle Click Handler --- END
+
+        function connectWebSocket() {
+            // ... (rest of connectWebSocket function) ...
+        }
+
+        // --- Update Sidebar Statistics --- START
+        function updateSidebarStats(currentServiceDataMap) {
+            // Log the received map for debugging
+            // console.log('[updateSidebarStats] Called with map:', JSON.parse(JSON.stringify(currentServiceDataMap)));
+
+            const statEnabled = document.getElementById('stat-enabled');
+            const statDisabled = document.getElementById('stat-disabled');
+            const statIssues = document.getElementById('stat-issues');
+            const statTotal = document.getElementById('stat-total');
+
+            if (!statEnabled || !statDisabled || !statIssues || !statTotal) {
+                console.warn("Sidebar stat elements not found.");
+                return;
+            }
+
+            let enabledCount = 0;
+            let disabledCount = 0;
+            let issuesCount = 0;
+
+            // Initialize or update the global map used for calculation
+            if (typeof window.currentHealthStatusMap === 'undefined') {
+                window.currentHealthStatusMap = {}; // Initialize if first time
+            }
+            Object.assign(window.currentHealthStatusMap, currentServiceDataMap);
+            // console.log('[updateSidebarStats] Full status map after merge:', JSON.parse(JSON.stringify(window.currentHealthStatusMap)));
+
+            // Calculate stats based on the full map
+            const servicePaths = Object.keys(window.currentHealthStatusMap);
+            statTotal.textContent = servicePaths.length; // Update total count
+
+            for (const path of servicePaths) {
+                 const statusData = window.currentHealthStatusMap[path];
+                 const status = statusData.status; // Get status string
+
+                 if (status === 'disabled') {
+                     disabledCount++;
+                 } else {
+                     enabledCount++; // Count anything not disabled as enabled
+                     if (status.startsWith('error') || status.startsWith('unhealthy')) {
+                         issuesCount++;
+                     }
+                 }
+            }
+            // console.log(`[updateSidebarStats] Calculated Counts - Enabled: ${enabledCount}, Disabled: ${disabledCount}, Issues: ${issuesCount}`);
+
+            // Update the text content of the stat elements
+            statEnabled.textContent = enabledCount;
+            statDisabled.textContent = disabledCount;
+            statIssues.textContent = issuesCount;
+        }
+        // --- Update Sidebar Statistics --- END
+
+        // Combined update function
     </script>
 </head>
 <body>
     <!-- Main Header -->
     <header class="main-header">
-        <div class="logo">
-            <img src="{{ url_for('static', path='/logo.png') }}" alt="MCP Gateway Logo" height="30"> <!-- Logo Image -->
-            <span>MCP Gateway</span>
+        <div class="header-left">
+             {# Button Moved Back To Header #}
+             <button id="sidebar-toggle" class="sidebar-toggle-button" title="Toggle Sidebar">☰</button>
+            <div class="logo">
+                <img src="{{ url_for('static', path='/logo.png') }}" alt="MCP Gateway Logo" height="30"> <!-- Logo Image -->
+                <span>MCP Gateway</span>
+            </div>
         </div>
-        <div class="header-right"> <!-- Added back header-right -->
-            <button id="theme-toggle" class="theme-toggle-button" title="Toggle Theme">🌙</button> <!-- Reverted to Button -->
+        <div class="header-right">
+            <button id="theme-toggle" class="theme-toggle-button" title="Toggle Theme">🌙</button>
             <span class="user-display">User: {{ username }}</span>
             <form action="/logout" method="post" style="display: inline;">
                 <button type="submit" class="logout-button">Logout</button>
@@ -306,15 +961,45 @@
     </header>
 
     <!-- Main Container (Sidebar + Content) -->
-    <div class="container">
+    <div class="container" id="main-container">
         <!-- Sidebar (Simplified) -->
-        <aside class="sidebar">
+        <aside class="sidebar" id="sidebar">
+            {# Button Moved Inside Sidebar #}
+            {# <button id="sidebar-toggle" class="sidebar-toggle-button" title="Toggle Sidebar">☰</button> #}
+
+            {# --- New Sidebar Content --- START #}
+            <div class="sidebar-section">
+                <h3>Filters</h3>
+                <nav class="sidebar-nav">
+                    <ul>
+                        <li><a href="/" class="sidebar-link active-filter" data-filter="all">All Servers</a></li>
+                        <li><a href="#" class="sidebar-link" data-filter="enabled">Enabled</a></li>
+                        <li><a href="#" class="sidebar-link" data-filter="disabled">Disabled</a></li>
+                        <li><a href="#" class="sidebar-link" data-filter="issues">With Issues</a></li>
+                        {# Add more filters later, e.g., by tag #}
+                    </ul>
+                </nav>
+            </div>
+
+            <div class="sidebar-section">
+                 <h3>Statistics</h3>
+                 <ul class="sidebar-stats">
+                     {# These counts need to be calculated/updated via JS or passed from backend #}
+                     <li><span>Total Servers:</span> <span id="stat-total">{{ services | length }}</span></li>
+                     <li><span>Enabled:</span> <span id="stat-enabled">?</span></li>
+                     <li><span>Disabled:</span> <span id="stat-disabled">?</span></li>
+                     <li><span>With Issues:</span> <span id="stat-issues">?</span></li>
+                 </ul>
+            </div>
+            {# --- New Sidebar Content --- END #}
+
+            {# Remove old Status section #}
+            {#
             <h3>Status</h3>
              <ul>
                  <li><span>Discovered</span> <span>{{ services | length }}</span></li>
-                 <!-- Add more status indicators later if needed -->
              </ul>
-            <!-- Removed other filter/category lists -->
+             #}
         </aside>
 
         <!-- Main Content Area -->
@@ -390,20 +1075,16 @@
                             {# Render badge with determined initial text/class #}
                             <div class="status-indicator-area">
                                 <span id="{{ badge_id }}" class="status-badge {{ status_class }}" title="{{ initial_status }}">{{ display_text }}</span>
-                                {# Only render spinner initially if status IS checking #}
-                                {% if initial_status == 'checking' %}
-                                    <span id="{{ spinner_id }}" class="status-spinner" style="display: inline-block;"></span>
-                                {% else %}
-                                    {# Render hidden spinner placeholder otherwise, JS will show if needed #}
-                                    <span id="{{ spinner_id }}" class="status-spinner"></span>
-                                {% endif %}
+                                {# Always render spinner, hide initially with inline style #}
+                                <span id="{{ spinner_id }}" class="status-spinner" style="display: none;"></span>
                             </div>
 
                             <div class="controls-row">
                                 <a href="/edit{{ service.path }}" class="edit-button">Modify</a>
                                 <form action="/toggle{{ service.path }}" method="post" class="toggle-form">
                                     <label class="switch">
-                                        <input type="checkbox" name="enabled" value="on" {% if service.is_enabled %}checked{% endif %} onchange="this.form.submit()">
+                                        {# Call new JS function on change #}
+                                        <input type="checkbox" name="enabled" value="on" {% if service.is_enabled %}checked{% endif %} onchange="handleToggleClick(this, '{{ service.path }}')">
                                         <span class="slider round"></span>
                                     </label>
                                     <span class="toggle-label">{{ 'Enabled' if service.is_enabled else 'Disabled' }}</span>
@@ -416,7 +1097,8 @@
                             <span id="{{ last_checked_id }}" class="metadata" data-timestamp="{{ service.last_checked_iso or '' }}">
                                 🕒 Last checked: <span class="time-ago">Never</span>
                             </span>
-                            <span class="metadata">🔧 {{ service.num_tools }}</span>
+                            {% set num_tools_id = 'num-tools-' + service.path | replace('/', '_') | replace(':', '_') %}
+                            <span id="{{ num_tools_id }}" class="metadata clickable-tool-icon" onclick="showToolModal('{{ service.path }}', '{{ service.display_name }}')" title="Click to view tools">🔧 {{ service.num_tools }}</span>
                             <span class="metadata">⭐ {{ service.num_stars }}</span>
                             <div class="platform-icons">
                                  {% if service.is_python %}<span>🐍 Python</span>{% endif %}
@@ -435,196 +1117,29 @@
         </main> <!-- end content -->
     </div> <!-- end container -->
 
+    <!-- Tool List Modal -->
+    <div id="tool-modal" class="modal-overlay" style="display: none;">
+        <div class="modal-content">
+            <span class="modal-close-button" onclick="closeToolModal()">&times;</span>
+            <h3 id="tool-modal-title">Tools for Service</h3>
+            <div id="tool-modal-list-container">
+                <!-- Tool list will be populated here by JS -->
+                <p>Loading...</p>
+            </div>
+        </div>
+    </div>
+    <!-- End Tool List Modal -->
+
     <script>
-        function formatTimeAgoJS(isoString) {
-            if (!isoString) {
-                return "Never";
-            }
-            try {
-                const dt = new Date(isoString);
-                const now = new Date();
-                const diff = now.getTime() - dt.getTime(); // Difference in milliseconds
-
-                const seconds = Math.floor(diff / 1000);
-                if (seconds < 2) return "Just now";
-                if (seconds < 60) return `${seconds}s ago`;
-
-                const minutes = Math.floor(seconds / 60);
-                if (minutes < 60) return `${minutes}m ago`;
-
-                const hours = Math.floor(minutes / 60);
-                if (hours < 24) return `${hours}h ago`;
-
-                const days = Math.floor(hours / 24);
-                return `${days}d ago`;
-            } catch (e) {
-                console.error("Error parsing date:", isoString, e);
-                return "Invalid date";
-            }
-        }
-
-        function updateAllTimestamps() {
-            document.querySelectorAll('.metadata[data-timestamp]').forEach(el => {
-                const isoString = el.dataset.timestamp;
-                const timeAgoEl = el.querySelector('.time-ago');
-                if (timeAgoEl) {
-                    timeAgoEl.textContent = formatTimeAgoJS(isoString);
-                }
-            });
-        }
-
-        // Combined update function
-        function updateServiceDisplay(badgeId, spinnerId, lastCheckedId, serviceData) {
-            const badge = document.getElementById(badgeId);
-            const spinner = document.getElementById(spinnerId);
-            const lastCheckedEl = document.getElementById(lastCheckedId);
-
-            console.log(`Updating display for ${badgeId}. Data:`, serviceData);
-
-            if (!badge || !spinner || !lastCheckedEl) {
-                console.error(`Missing elements for ${badgeId}. Badge: ${!!badge}, Spinner: ${!!spinner}, Timestamp: ${!!lastCheckedEl}`);
-                return;
-            }
-
-            const status = serviceData.status;
-            const lastCheckedIso = serviceData.last_checked_iso; // Use ISO key
-
-            // Update last checked time first
-            // Store the raw timestamp on the element
-            lastCheckedEl.dataset.timestamp = lastCheckedIso || '';
-
-            // Update displayed text immediately using the new JS formatter
-            const timeAgoEl = lastCheckedEl.querySelector('.time-ago');
-            if (timeAgoEl) {
-                timeAgoEl.textContent = formatTimeAgoJS(lastCheckedIso);
-            } else {
-                console.error('Could not find .time-ago span within', lastCheckedEl);
-            }
-
-            // Handle spinner visibility and badge update
-            if (status === 'checking') {
-                spinner.style.display = 'inline-block'; // Show spinner
-                console.log(`Status is checking, showing spinner ${spinnerId}`);
-                // badge.style.opacity = '0.7'; // Optional dimming
-                return; // Don't update badge text/color while checking
-            } else {
-                console.log(`Status is NOT checking (${status}), attempting to hide spinner ${spinnerId}`);
-                spinner.style.display = 'none'; // Hide spinner for stable status
-                console.log(`Set display = 'none' for ${spinnerId}. Current display: ${spinner.style.display}`);
-                // badge.style.opacity = '1'; // Restore opacity
-
-                // Determine badge class and text based on stable status
-                let statusClass = 'status-unknown';
-                let statusText = status.split('(')[0].trim();
-
-                if (status === 'healthy') {
-                    statusClass = 'status-healthy';
-                } else if (status.startsWith('unhealthy')) {
-                    statusClass = 'status-unhealthy';
-                } else if (status.startsWith('error')) {
-                    statusClass = 'status-error';
-                } else if (status === 'disabled') {
-                    statusClass = 'status-disabled';
-                }
-
-                // Update badge appearance
-                badge.classList.remove('status-healthy', 'status-unhealthy', 'status-checking', 'status-error', 'status-unknown', 'status-disabled');
-                badge.classList.add(statusClass);
-                badge.title = status; // Update tooltip
-                badge.textContent = statusText;
-            }
-        }
-
-        function connectWebSocket() {
-            const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-            const wsUrl = `${wsProtocol}//${window.location.host}/ws/health_status`;
-            console.log(`Connecting WebSocket to ${wsUrl}`);
-            const socket = new WebSocket(wsUrl);
-
-            socket.onopen = function(event) {
-                console.log("WebSocket connection established.");
-            };
-
-            socket.onmessage = function(event) {
-                console.log("Raw WebSocket message received:", event.data); // Log raw data
-                try {
-                    const serviceDataMap = JSON.parse(event.data);
-                    console.log("Parsed status update:", serviceDataMap); // Log parsed object
-                    for (const path in serviceDataMap) {
-                        if (serviceDataMap.hasOwnProperty(path)) {
-                            console.log(`>>> Processing update for path: ${path}`); // Log path being processed
-                            const serviceData = serviceDataMap[path];
-                            // Generate IDs
-                            const safePath = path.replace(/\//g, '_').replace(/:/g, '_');
-                            const badgeId = 'status-badge-' + safePath;
-                            const spinnerId = 'spinner-for-' + safePath;
-                            const lastCheckedId = 'last-checked-' + safePath;
-                            // Update display using combined function
-                            updateServiceDisplay(badgeId, spinnerId, lastCheckedId, serviceData);
-                        }
-                    }
-                } catch (e) {
-                    console.error("Error parsing WebSocket message or updating display:", e);
-                }
-            };
-
-            socket.onerror = function(event) {
-                console.error("WebSocket error observed:", event);
-            };
-
-            socket.onclose = function(event) {
-                console.log("WebSocket connection closed. Attempting to reconnect in 5 seconds...");
-                setTimeout(connectWebSocket, 5000);
-            };
-        }
-
+        // Moved DOMContentLoaded listener to the end of the script block
         document.addEventListener('DOMContentLoaded', () => {
+            // Ensure all functions above are defined before calling them
             connectWebSocket();
-            // Initial timestamp update based on data-* attributes set by Jinja
-            updateAllTimestamps();
-            // Set interval to update timestamps periodically
-            setInterval(updateAllTimestamps, 5000); // Update every 5 seconds
+            updateAllTimestamps(); // Initial format based on Jinja render
+            // setInterval(updateAllTimestamps, 5000); // Keep this commented out for now
         });
     </script>
 
     <!-- Add Theme Toggle Script -->
-    <script>
-        const themeToggleButton = document.getElementById('theme-toggle');
-        const currentTheme = localStorage.getItem('theme');
-        const prefersDarkQuery = window.matchMedia('(prefers-color-scheme: dark)');
-
-        // Function to update button icon based on theme
-        function updateToggleButtonIcon(theme) {
-            console.log("Updating button icon for theme:", theme);
-            themeToggleButton.textContent = theme === 'dark' ? '🌙' : '☀️'; // Moon for dark, Sun for light
-        }
-
-        const initialTheme = currentTheme || (prefersDarkQuery.matches ? 'dark' : 'dark');
-        console.log("Initial theme:", initialTheme, "(From storage:", currentTheme, ", Prefers dark:", prefersDarkQuery.matches, ")");
-        updateToggleButtonIcon(initialTheme); // Set initial icon
-
-        themeToggleButton.addEventListener('click', () => {
-            // Toggle class directly
-            document.documentElement.classList.toggle('dark-mode');
-            // Determine new theme based on class presence
-            let newTheme = document.documentElement.classList.contains('dark-mode') ? 'dark' : 'light';
-            console.log("Theme toggled. New theme:", newTheme);
-
-            // Determine new theme and save to localStorage
-            localStorage.setItem('theme', newTheme);
-
-            // Update button icon
-            updateToggleButtonIcon(newTheme);
-        });
-
-        prefersDarkQuery.addEventListener('change', event => {
-            if (!localStorage.getItem('theme')) {
-                const newColorScheme = event.matches ? "dark" : "light";
-                console.log("System theme changed to:", newColorScheme);
-                document.documentElement.classList.toggle('dark-mode', event.matches);
-                updateToggleButtonIcon(newColorScheme); // Update button icon
-            }
-        });
-    </script>
 </body>
-</html> 
+</html>
