@@ -447,6 +447,22 @@
         .sidebar-stats span:last-child {
             font-weight: 600;
         }
+
+        /* Refresh button specific styles */
+        .refresh-button {
+            background: none;
+            border: none;
+            padding: 0;
+            margin: 0 0 0 5px;
+            cursor: pointer;
+            vertical-align: middle;
+            color: inherit;
+            font-size: 1em; /* Match icon span */
+        }
+        .refresh-button:disabled {
+            cursor: not-allowed;
+            opacity: 0.5;
+        }
     </style>
     <script>
         // Immediately invoked function to apply theme before rendering
@@ -552,6 +568,43 @@
             const lastCheckedIso = serviceData.last_checked_iso; // Use ISO key
             const numTools = serviceData.num_tools; // --- Get num_tools from data --- START
 
+            // --- Update Health Status Display --- START
+            let statusClass = 'status-unknown';
+            let displayText = 'unknown';
+            let showSpinner = false;
+
+            if (status === 'healthy') {
+                statusClass = 'status-healthy';
+                displayText = 'healthy';
+            } else if (status.startsWith('unhealthy')) {
+                statusClass = 'status-unhealthy';
+                // Extract the part before parenthesis if present, otherwise use full string
+                displayText = status.includes('(') ? status.split('(')[0].trim() : status;
+            } else if (status.startsWith('error')) {
+                statusClass = 'status-error';
+                displayText = status.includes('(') ? status.split('(')[0].trim() : status;
+            } else if (status === 'disabled') {
+                statusClass = 'status-disabled';
+                displayText = 'disabled';
+            } else if (status === 'checking') {
+                // Keep badge as unknown/gray while checking, but show spinner
+                statusClass = 'status-unknown'; // Or maybe a specific 'status-checking' class?
+                displayText = 'checking'; // Update text to 'checking'
+                showSpinner = true;
+            }
+
+            // Update badge classes
+            badge.className = 'status-badge ' + statusClass;
+            // Update badge text
+            badge.textContent = displayText;
+            // Update tooltip with full status message
+            badge.title = status;
+
+            // Show/hide spinner
+            spinner.style.display = showSpinner ? 'inline-block' : 'none';
+            console.log(`[updateServiceDisplay] Status: ${status}, Class: ${statusClass}, Text: ${displayText}, Spinner: ${showSpinner}`);
+            // --- Update Health Status Display --- END
+
             // Update last checked time first
             console.log(`[updateServiceDisplay] Received lastCheckedIso: ${lastCheckedIso} for ${lastCheckedId}`);
             // Store the raw timestamp on the element
@@ -574,6 +627,27 @@
                 numToolsEl.textContent = `🔧 ${numTools}`;
             }
             // --- Update Num Tools Display --- END
+
+            // --- Update Refresh Button State --- START
+            try {
+                // Derive original path from badgeId (e.g., status-badge-_api_v1_test -> /api/v1/test)
+                const safePath = badgeId.replace(/^status-badge-/, '');
+                const originalPath = '/' + safePath.replace(/_/g, '/');
+
+                // Find the refresh button using the derived original path
+                const refreshButton = document.querySelector(`.refresh-button[data-path="${originalPath}"]`);
+
+                if (refreshButton) {
+                    const shouldBeDisabled = (status === 'disabled');
+                    refreshButton.disabled = shouldBeDisabled;
+                    console.log(`[updateServiceDisplay] Setting refresh button for ${originalPath} disabled state to: ${shouldBeDisabled}`);
+                } else {
+                    console.warn(`[updateServiceDisplay] Could not find refresh button for path: ${originalPath}`);
+                }
+            } catch (e) {
+                console.error("[updateServiceDisplay] Error finding or updating refresh button state:", e);
+            }
+            // --- Update Refresh Button State --- END
         }
 
         // --- Tool Modal Functions --- START
@@ -860,6 +934,64 @@
         });
         // --- Tool Modal Functions --- END
 
+        // --- Refresh Button Click Handler --- START
+        document.addEventListener('click', async (event) => {
+            const refreshButton = event.target.closest('.refresh-button');
+            if (!refreshButton || refreshButton.disabled) {
+                return; // Ignore clicks not on an enabled refresh button
+            }
+
+            const servicePath = refreshButton.dataset.path;
+            if (!servicePath) {
+                console.error("Refresh button missing data-path attribute.");
+                return;
+            }
+
+            console.log(`Refresh button clicked for path: ${servicePath}`);
+
+            // Indicate loading state (e.g., disable button, maybe change icon/add spinner later)
+            refreshButton.disabled = true;
+            const originalIconHTML = refreshButton.innerHTML; // Store original icon
+            // Basic text change for loading indication
+            refreshButton.innerHTML = '<span class=\"spinner-border spinner-border-sm\" role=\"status\" aria-hidden=\"true\"></span> Refreshing...';
+
+
+            try {
+                const response = await fetch(`/api/refresh${servicePath}`, {
+                    method: 'POST',
+                    headers: {
+                        // Add authentication headers if needed, e.g., CSRF token
+                        // 'X-CSRF-Token': 'your_token_here'
+                    }
+                });
+
+                if (!response.ok) {
+                    let errorMsg = `Error refreshing: ${response.status} ${response.statusText}`;
+                    try {
+                        const errorData = await response.json();
+                        errorMsg = errorData.detail || errorMsg;
+                    } catch(e) { /* Ignore if response wasn't JSON */ }
+                    throw new Error(errorMsg);
+                }
+
+                const result = await response.json();
+                console.log(`Refresh successful for ${servicePath}:`, result);
+                // UI should update via WebSocket message triggered by the backend after refresh
+                // You could optionally update the specific timestamp here if needed,
+                // but the WS push is generally preferred.
+
+            } catch (error) {
+                console.error(`Failed to trigger refresh for ${servicePath}:`, error);
+                // Optionally display a user-friendly error message
+                alert(`Could not refresh service ${servicePath}: ${error.message}`);
+            } finally {
+                // Restore button state regardless of success/error
+                refreshButton.disabled = false;
+                refreshButton.innerHTML = originalIconHTML; // Restore original icon/text
+            }
+        });
+        // --- Refresh Button Click Handler --- END
+
         // --- Toggle Click Handler --- START
         function handleToggleClick(checkboxElement, servicePath) {
              console.log(`Toggle clicked for path: ${servicePath}`);
@@ -1028,7 +1160,18 @@
                             <h2>{{ service.display_name }}</h2>
                             <div class="header-right-items">
                                 <span class="official-badge">official</span>
-                                <span class="icons">☁️ 💻 🔄</span>
+                                <span class="icons">
+                                    ☁️ 💻
+                                    {# Wrap the refresh icon in a button #}
+                                    <button class="refresh-button icon-button"
+                                            title="Refresh Status & Tools"
+                                            data-path="{{ service.path }}"
+                                            style="background: none; border: none; padding: 0; margin: 0 0 0 5px; vertical-align: middle; color: inherit;"
+                                            {% if not service.is_enabled %}disabled{% endif %}>
+                                        <span class="refresh-icon" style="font-size: 1em;">🔄</span>
+                                        {# Tooltip or accessible text can be added #}
+                                    </button>
+                                </span>
                             </div>
                         </div>
                         <div class="card-body">
@@ -1089,6 +1232,7 @@
                                     </label>
                                     <span class="toggle-label">{{ 'Enabled' if service.is_enabled else 'Disabled' }}</span>
                                 </form>
+
                             </div>
                         </div>
                         <div class="card-footer">

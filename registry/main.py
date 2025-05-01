@@ -1041,6 +1041,55 @@ async def get_service_tools(
 # --- Endpoint to get tool list for a service --- END
 
 
+# --- Refresh Endpoint --- START
+@app.post("/api/refresh/{service_path:path}")
+async def refresh_service(service_path: str, username: Annotated[str, Depends(api_auth)]):
+    if not service_path.startswith('/'):
+        service_path = '/' + service_path
+
+    # Check if service exists
+    if service_path not in REGISTERED_SERVERS:
+        raise HTTPException(status_code=404, detail="Service path not registered")
+
+    # Check if service is enabled
+    is_enabled = MOCK_SERVICE_STATE.get(service_path, False)
+    if not is_enabled:
+        raise HTTPException(status_code=400, detail="Cannot refresh a disabled service")
+
+    print(f"Manual refresh requested for {service_path} by user '{username}'...")
+    try:
+        # Trigger the health check (which also updates tools if healthy)
+        await perform_single_health_check(service_path)
+    except Exception as e:
+        # Catch potential errors during the check itself
+        print(f"ERROR during manual refresh check for {service_path}: {e}")
+        # Update status to reflect the error
+        error_status = f"error: refresh execution failed ({type(e).__name__})"
+        SERVER_HEALTH_STATUS[service_path] = error_status
+        SERVER_LAST_CHECK_TIME[service_path] = datetime.now(timezone.utc)
+        # Still broadcast the error state
+        await broadcast_single_service_update(service_path)
+        # Return error response
+        raise HTTPException(status_code=500, detail=f"Refresh check failed: {e}")
+
+    # Check completed, broadcast the latest status
+    await broadcast_single_service_update(service_path)
+
+    # Return the latest status from global state
+    final_status = SERVER_HEALTH_STATUS.get(service_path, "unknown")
+    final_last_checked_dt = SERVER_LAST_CHECK_TIME.get(service_path)
+    final_last_checked_iso = final_last_checked_dt.isoformat() if final_last_checked_dt else None
+    final_num_tools = REGISTERED_SERVERS.get(service_path, {}).get("num_tools", 0)
+
+    return {
+        "service_path": service_path,
+        "status": final_status,
+        "last_checked_iso": final_last_checked_iso,
+        "num_tools": final_num_tools
+    }
+# --- Refresh Endpoint --- END
+
+
 # --- Add Edit Routes ---
 
 @app.get("/edit/{service_path:path}", response_class=HTMLResponse)
@@ -1118,6 +1167,51 @@ async def edit_server_submit(
 
     # Redirect back to the main page
     return RedirectResponse(url="/", status_code=status.HTTP_303_SEE_OTHER)
+
+
+# --- Helper function to broadcast single service update --- START
+async def broadcast_single_service_update(service_path: str):
+    """Sends the current status, tool count, and last check time for a specific service."""
+    global active_connections, SERVER_HEALTH_STATUS, SERVER_LAST_CHECK_TIME, REGISTERED_SERVERS
+
+    if not active_connections:
+        return # No clients connected
+
+    status = SERVER_HEALTH_STATUS.get(service_path, "unknown")
+    last_checked_dt = SERVER_LAST_CHECK_TIME.get(service_path)
+    last_checked_iso = last_checked_dt.isoformat() if last_checked_dt else None
+    num_tools = REGISTERED_SERVERS.get(service_path, {}).get("num_tools", 0)
+
+    update_data = {
+        service_path: {
+            "status": status,
+            "last_checked_iso": last_checked_iso,
+            "num_tools": num_tools
+        }
+    }
+    message = json.dumps(update_data)
+    print(f"--- BROADCAST SINGLE: Sending update for {service_path}: {message}")
+
+    # Use the same concurrent sending logic as in toggle
+    disconnected_clients = set()
+    current_connections = list(active_connections) # Copy to iterate safely
+    send_tasks = []
+    for conn in current_connections:
+        send_tasks.append((conn, conn.send_text(message)))
+
+    results = await asyncio.gather(*(task for _, task in send_tasks), return_exceptions=True)
+
+    for i, result in enumerate(results):
+        conn, _ = send_tasks[i]
+        if isinstance(result, Exception):
+            print(f"Error sending single update to WebSocket client {conn.client}: {result}. Marking for removal.")
+            disconnected_clients.add(conn)
+    if disconnected_clients:
+        print(f"Removing {len(disconnected_clients)} disconnected clients after single update broadcast.")
+        for conn in disconnected_clients:
+            if conn in active_connections:
+                active_connections.remove(conn)
+# --- Helper function to broadcast single service update --- END
 
 
 # --- WebSocket Endpoint ---
