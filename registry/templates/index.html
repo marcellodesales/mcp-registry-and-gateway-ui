@@ -17,56 +17,68 @@
             100% { transform: rotate(360deg); }
         }
 
-        /* -- Theme Color Variables -- */
+        /* -- Theme Color Variables -- Nova-Inspired Light Mode */
         :root {
-            --bg-color: #f8f9fa; /* Light background */
-            --text-color: #212529; /* Dark text */
+            --bg-color: #f8f9fa; /* Very light gray/off-white */
+            --text-color: #16191f; /* Very dark gray/near black */
             --card-bg: #ffffff; /* White cards */
-            --card-border: #dee2e6; /* Keep border color */
-            --header-bg: #e9ecef;
-            --sidebar-bg: var(--bg-color); /* Match main background */
-            --button-bg: #0d6efd; /* Primary button */
+            --card-border: #e0e0e0; /* Lighter gray border */
+            --header-bg: #ffffff; /* White header */
+            --sidebar-bg: var(--bg-color); /* Sidebar matches main background */
+            --accent-color: #7a00cc; /* Purple accent */
+            --accent-light-bg: #f7f5ff; /* Very light purple background */
+            --button-bg: var(--accent-color); /* Purple button */
             --button-text: #ffffff;
-            --secondary-button-bg: #6c757d; /* Gray secondary */
-            --secondary-button-text: #ffffff;
-            --link-color: #0d6efd;
-            --badge-bg: #6c757d;
-            --badge-text: #ffffff;
-            --official-badge-bg: #0d6efd;
-            --official-badge-text: #ffffff;
+            --secondary-button-bg: #e9ecef; /* Light gray secondary button */
+            --secondary-button-text: var(--text-color);
+            --link-color: var(--accent-color); /* Purple links */
+            --badge-bg: #e9ecef; /* Light gray badge */
+            --badge-text: var(--text-color);
+            --official-badge-bg: var(--accent-light-bg); /* Light purple badge */
+            --official-badge-text: var(--accent-color); /* Purple text on badge */
             --input-bg: #ffffff;
-            --input-text: #212529;
+            --input-text: var(--text-color);
             --input-placeholder: #6c757d;
-            /* Theme Toggle Button Colors - Light Mode */
-            --toggle-button-bg: #ffffff; /* White background */
-            --toggle-button-text: #212529; /* Dark icon */
-            --toggle-button-border: #dee2e6; /* Light border */
-            /* Add more variables as needed */
+            --input-border: #ced4da;
+            --input-border-focus: var(--accent-color); /* Purple focus border */
+            /* Theme Toggle (Keep consistent or adapt?) */
+            --toggle-button-bg: var(--input-bg);
+            --toggle-button-text: var(--text-color);
+            --toggle-button-border: var(--input-border);
+            /* Sidebar Toggle (Keep consistent or adapt?) */
+            --sidebar-toggle-bg-light: none;
+            --sidebar-toggle-text-light: var(--text-color);
+            --sidebar-toggle-border-light: none;
         }
 
+        /* Dark mode would also need updating to match */
         html.dark-mode {
-            --bg-color: #212529; /* Dark background */
-            --text-color: #f8f9fa; /* Light text */
-            --card-bg: #343a40; /* Darker cards */
+            /* TODO: Define Nova-inspired dark theme variables */
+            --bg-color: #212529; /* Placeholder dark */
+            --text-color: #f8f9fa; /* Placeholder light text */
+            --card-bg: #343a40; /* Placeholder dark card */
             --card-border: #495057;
-            --header-bg: #495057;
-            --sidebar-bg: var(--bg-color); /* Match main background */
-            --button-bg: #0d6efd; /* Keep primary button */
+            --header-bg: #212529; /* Dark header */
+            --accent-color: #a040ff; /* Lighter purple for dark */
+            --accent-light-bg: #3a304f; /* Darker purple bg */
+            --button-bg: var(--accent-color);
             --button-text: #ffffff;
-            --secondary-button-bg: #6c757d; /* Keep secondary button gray */
-            --secondary-button-text: #ffffff;
-            --link-color: #6ea8fe; /* Lighter blue link */
-            --badge-bg: #adb5bd;
-            --badge-text: #212529;
-            --official-badge-bg: #6ea8fe; /* Lighter blue official */
-            --official-badge-text: #212529; /* Dark text on light blue */
-            --input-bg: #495057;
-            --input-text: #f8f9fa;
+            --secondary-button-bg: #495057; /* Dark gray secondary */
+            --secondary-button-text: var(--text-color);
+            --link-color: var(--accent-color);
+            --badge-bg: #495057;
+            --badge-text: var(--text-color);
+            --official-badge-bg: var(--accent-light-bg);
+            --official-badge-text: var(--accent-color);
+            --input-bg: #343a40;
+            --input-text: var(--text-color);
             --input-placeholder: #adb5bd;
-            /* Theme Toggle Button Colors - Dark Mode */
-            --toggle-button-bg: #495057; /* Dark background (matches header) */
-            --toggle-button-text: #f8f9fa; /* Light icon */
-            --toggle-button-border: #6c757d; /* Darker border */
+            --input-border: #495057;
+            --input-border-focus: var(--accent-color);
+            /* Keep toggles simple for now */
+            --toggle-button-bg: #495057;
+            --toggle-button-text: var(--text-color);
+            --toggle-button-border: #6c757d;
         }
 
         /* Apply variables */
@@ -79,6 +91,8 @@
         .main-header {
             background-color: var(--header-bg);
             border-bottom: 1px solid var(--card-border); /* Add subtle border */
+            /* Add box-shadow for slight elevation */
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
             /* Assuming header text color is inherited or set in style.css */
         }
         .sidebar {
@@ -106,19 +120,38 @@
             border: 1px solid var(--card-border);
             color: var(--text-color); /* Ensure card text uses theme color */
             box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05); /* Subtle shadow */
+            border-radius: 12px; /* --- Add rounding --- */
         }
         .service-card h2, .service-card .owner, .service-card .description {
              color: var(--text-color); /* Explicitly set text color */
         }
         /* Example for a specific badge if needed */
-        .badge {
-            background-color: var(--badge-bg);
-            color: var(--badge-text);
+        .badge,
+        .official-badge {
+            /* background-color set by specific class/variable */
+            /* color set by specific class/variable */
+            padding: 0.25em 0.75em;
+            border-radius: 1em; /* Pill shape */
+            font-size: 0.8em;
+            font-weight: 600;
+            vertical-align: middle;
+            display: inline-block; /* Ensure padding applies */
         }
         .edit-button {
             /* Assuming style.css defines button styles, override if needed */
             /* background-color: var(--button-bg); */
             /* color: var(--button-text); */
+            background-color: var(--button-bg);
+            color: var(--button-text);
+            border: none;
+            padding: 8px 16px;
+            border-radius: 8px; /* --- Add rounding --- */
+            font-weight: 600;
+            cursor: pointer;
+            transition: background-color 0.2s ease;
+        }
+        .edit-button:hover {
+            opacity: 0.9; /* Slight fade on hover */
         }
         a {
             color: var(--link-color);
@@ -130,21 +163,32 @@
         .search-bar button {
             background-color: var(--secondary-button-bg);
             color: var(--secondary-button-text);
-            border: 1px solid var(--secondary-button-bg);
+            border: 1px solid var(--card-border); /* Use card border for light gray */
+            padding: 8px 16px;
+            border-radius: 8px; /* --- Add rounding --- */
+            font-weight: 600;
+            cursor: pointer;
+            transition: background-color 0.2s ease, border-color 0.2s ease;
         }
-        .edit-button { /* Assuming this is primary */
-            background-color: var(--button-bg);
-            color: var(--button-text);
-            /* Add padding/border etc. if needed from style.css */
+        .logout-button:hover,
+        .search-bar button:hover {
+            background-color: var(--card-border); /* Darken slightly on hover */
         }
         .search-bar input[type="search"] {
             background-color: var(--input-bg);
             color: var(--input-text);
-            border: 1px solid var(--card-border);
+            border: 1px solid var(--input-border);
+            border-radius: 8px; /* --- Add rounding --- */
+            padding: 8px 12px;
         }
         .search-bar input[type="search"]::placeholder {
             color: var(--input-placeholder);
             opacity: 1; /* Override browser defaults */
+        }
+        .search-bar input[type="search"]:focus {
+             outline: none;
+             border-color: var(--input-border-focus);
+             box-shadow: 0 0 0 2px rgba(122, 0, 204, 0.2); /* Optional focus ring */
         }
         .official-badge {
             background-color: var(--official-badge-bg);
@@ -216,6 +260,22 @@
             display: flex;
             align-items: center;
             gap: 8px;
+            flex-shrink: 0; /* --- Prevent icons from shrinking --- */
+        }
+
+        /* Added overflow:hidden to card-header */
+        .card-header {
+             display: flex;
+             align-items: center;
+             margin-bottom: 10px;
+             flex-wrap: nowrap; /* Explicitly prevent wrapping */
+        }
+
+        /* --- Add style for h2 within card-header --- */
+        .card-header h2 {
+            flex-grow: 1; /* Allow title to take up available space */
+            min-width: 0; /* Allow title to shrink below its content size */
+            margin-right: 10px; /* Add some space between title and right items */
         }
 
         /* New style for controls row */
@@ -344,12 +404,14 @@
             /* z-index: 10; */
             background: none;
             border: none;
-            color: var(--text-color);
+            color: #ffffff; /* Set color explicitly to white */
             font-size: 1.5em; /* Adjust size */
             cursor: pointer;
             /* Restore original padding/margin */
             padding: 0 10px;
             margin-right: 10px;
+            /* Add transition */
+            transition: opacity 0.2s ease; /* Only transition opacity */
         }
         .sidebar-toggle-button:hover {
             opacity: 0.7;
@@ -420,18 +482,19 @@
             display: block;
             color: var(--text-color);
             text-decoration: none;
-            padding: 8px 10px;
-            border-radius: 4px;
+            padding: 10px 12px; /* Adjust padding */
+            border-radius: 8px; /* --- Add rounding --- */
             font-size: 0.95em;
+            font-weight: 500; /* Slightly less bold */
             transition: background-color 0.2s ease, color 0.2s ease;
         }
         .sidebar-link:hover {
-            background-color: var(--card-bg); /* Subtle hover */
-            color: var(--link-color); /* Highlight on hover */
+            background-color: var(--secondary-button-bg); /* Use light gray hover */
+            color: var(--text-color); /* Keep text dark on hover */
         }
         .sidebar-link.active-filter {
-            background-color: rgba(13, 110, 253, 0.1); /* Light primary background for active */
-            color: var(--link-color);
+            background-color: var(--accent-light-bg); /* Light purple background for active */
+            color: var(--accent-color); /* Purple text */
             font-weight: 600;
         }
         .sidebar-stats li {
@@ -477,8 +540,11 @@
             console.log('[HEAD SCRIPT] Determined initial theme:', theme);
             if (theme === 'dark') {
                 document.documentElement.classList.add('dark-mode');
+                // Optional: document.documentElement.setAttribute('data-theme', 'dark');
             } else {
                 document.documentElement.classList.remove('dark-mode');
+                // Explicitly set data-theme for light mode on initial load
+                document.documentElement.setAttribute('data-theme', 'light');
             }
         })();
 
@@ -513,6 +579,19 @@
                 console.error("Error parsing date:", isoString, e);
                 return "Invalid date";
             }
+        }
+
+        // --- Add Debounce Function ---
+        function debounce(func, wait) {
+          let timeout;
+          return function executedFunction(...args) {
+            const later = () => {
+              clearTimeout(timeout);
+              func(...args);
+            };
+            clearTimeout(timeout);
+            timeout = setTimeout(later, wait);
+          };
         }
 
         // =====================================================================
@@ -702,6 +781,63 @@
             });
             console.log(`Filter applied. Visible cards: ${visibleCount}`);
             // TODO: Update a "no results" message visibility if needed
+        }
+
+        // =====================================================================
+        // == Dynamic Font Resizing Logic (for Card Titles)
+        // =====================================================================
+
+        function adjustTitleFontSize(element, defaultFontSizePx = 24, minFontSizePx = 12, stepPx = 1) {
+            if (!element) return;
+
+            // Reset to default size first to handle widening containers AND ensure CSS overrides apply correctly
+            element.style.fontSize = `${defaultFontSizePx}px`;
+
+            // Allow browser to reflow/repaint before measuring
+            // requestAnimationFrame helps but setTimeout might be more robust here if issues persist
+            // requestAnimationFrame(() => {
+                // Check if overflow happens at default size
+                if (element.scrollWidth > element.clientWidth) {
+                    let currentSize = defaultFontSizePx;
+                    // Reduce size step-by-step
+                    while (element.scrollWidth > element.clientWidth && currentSize > minFontSizePx) {
+                        currentSize -= stepPx;
+                        element.style.fontSize = `${currentSize}px`;
+                    }
+                    // Final check: if still overflowing at min size, ensure it's set to min
+                    if (element.scrollWidth > element.clientWidth && currentSize <= minFontSizePx) {
+                         element.style.fontSize = `${minFontSizePx}px`;
+                    }
+                }
+                // Optional: If it fits even at default, clear the inline style to inherit from CSS
+                // else {
+                //    element.style.fontSize = ''; // Let CSS rule apply
+                // }
+            // });
+        }
+
+        function adjustAllTitles() {
+            const titles = document.querySelectorAll('.service-card .card-header h2');
+            if (titles.length === 0) return;
+
+            // Get default font size from the first title (assuming they are the same via CSS)
+            // Important: Ensure CSS for h2 has a base font-size set (e.g., 1.5em)
+            const defaultFontSize = window.getComputedStyle(titles[0]).fontSize;
+            const defaultFontSizePx = parseFloat(defaultFontSize); // Handles 'px' unit correctly
+            if (isNaN(defaultFontSizePx) || defaultFontSizePx <= 0) {
+                console.warn("Could not determine default font size for titles. Using fallback.");
+                defaultFontSizePx = 24; // Fallback default size
+            }
+
+            // Define minimum size (adjust as needed)
+            const minFontSizePx = Math.max(10, defaultFontSizePx * 0.6); // Example: 60% of default, but at least 10px
+
+            titles.forEach(title => {
+                // Use a slight delay with setTimeout to ensure layout is stable before measuring/adjusting
+                setTimeout(() => {
+                    adjustTitleFontSize(title, defaultFontSizePx, minFontSizePx, 1); // Use 1px step
+                }, 0);
+            });
         }
 
         // =====================================================================
@@ -1003,6 +1139,14 @@
             const isDarkMode = htmlElement.classList.toggle('dark-mode');
             localStorage.setItem('theme', isDarkMode ? 'dark' : 'light');
             console.log('Theme toggled to:', isDarkMode ? 'dark' : 'light');
+
+            // Update the data-theme attribute consistently
+            if (isDarkMode) {
+                htmlElement.removeAttribute('data-theme'); // Remove light theme attribute
+                // Optional: htmlElement.setAttribute('data-theme', 'dark');
+            } else {
+                htmlElement.setAttribute('data-theme', 'light'); // Add light theme attribute
+            }
             // Update button icon if needed (e.g., sun/moon) - requires icon elements
             const themeToggleButton = document.getElementById('theme-toggle');
             if (themeToggleButton) {
@@ -1051,6 +1195,7 @@
 
             // Initial UI setup
             updateAllTimestamps(); // Format initial timestamps
+            adjustAllTitles(); // Adjust titles on initial load
 
             // Start WebSocket connection
             connectWebSocket(); // Handles ongoing UI updates
@@ -1085,6 +1230,9 @@
              if (sidebarNav) {
                  sidebarNav.addEventListener('click', handleFilterClick);
              }
+
+             // Add debounced resize listener for title adjustments
+             window.addEventListener('resize', debounce(adjustAllTitles, 150));
 
              // Apply initial filter state
              applyCardFilter('all'); // Show all cards initially
@@ -1272,12 +1420,14 @@
                             </div>
                         </div>
                         <div class="card-footer">
-                            {% set last_checked_id = 'last-checked-' + service.path | replace('/', '_') | replace(':', '_') %}
+                            {# Use the consistent safe_path variable defined earlier #}
+                            {% set last_checked_id = 'last-checked-' + safe_path %}
                             {# Store ISO timestamp, display initial formatted text inside span #}
                             <span id="{{ last_checked_id }}" class="metadata" data-timestamp="{{ service.last_checked_iso or '' }}">
                                 🕒 Last checked: <span class="time-ago">Never</span>
                             </span>
-                            {% set num_tools_id = 'num-tools-' + service.path | replace('/', '_') | replace(':', '_') %}
+                            {# Use the consistent safe_path variable defined earlier #}
+                            {% set num_tools_id = 'num-tools-' + safe_path %}
                             <span id="{{ num_tools_id }}" class="metadata clickable-tool-icon" onclick="showToolModal('{{ service.path }}', '{{ service.display_name }}')" title="Click to view tools">🔧 {{ service.num_tools }}</span>
                             <span class="metadata">⭐ {{ service.num_stars }}</span>
                             <div class="platform-icons">
