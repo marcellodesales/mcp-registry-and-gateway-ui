@@ -412,6 +412,8 @@
             margin-right: 10px;
             /* Add transition */
             transition: opacity 0.2s ease; /* Only transition opacity */
+            position: relative; /* Allow manual position adjustment */
+            top: -2px; /* Nudge UP slightly */
         }
         .sidebar-toggle-button:hover {
             opacity: 0.7;
@@ -525,6 +527,24 @@
         .refresh-button:disabled {
             cursor: not-allowed;
             opacity: 0.5;
+        }
+
+        /* --- Logo Dark Mode Styling --- */
+        .main-header .logo img {
+            transition: filter 0.3s ease; /* Smooth transition for filter */
+            height: 3.5rem; /* Match toggle button effective size using root em */
+            width: auto; /* Maintain aspect ratio */
+        }
+        html.dark-mode .main-header .logo img {
+            /* filter: grayscale(100%) brightness(0) invert(100%) brightness(1.5); <<< Old filter */
+            filter: grayscale(100%) brightness(0) invert(100%) brightness(1.5); /* Restore: Force to white and brighten */
+        }
+
+        /* --- Style the logo container --- */
+        .logo {
+            display: flex; /* Make logo container a flexbox */
+            align-items: center; /* Vertically center items inside logo */
+            gap: 8px; /* Space between logo image and text */
         }
     </style>
     <script>
@@ -1262,7 +1282,7 @@
              {# Button Moved Back To Header #}
              <button id="sidebar-toggle" class="sidebar-toggle-button" title="Toggle Sidebar">☰</button>
             <div class="logo">
-                <img src="{{ url_for('static', path='/logo.png') }}" alt="MCP Gateway Logo" height="30"> <!-- Logo Image -->
+                <img src="{{ url_for('static', path='/logo.png') }}" alt="MCP Gateway Logo"> <!-- Logo Image - Removed height attribute -->
                 <span>MCP Gateway</span>
             </div>
         </div>

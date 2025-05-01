@@ -5,6 +5,10 @@
 ![Under Construction](https://img.shields.io/badge/Status-Under%20Construction-yellow)
 ![Stability](https://img.shields.io/badge/API%20Stability-Experimental-orange)
 
+<p align="center">
+  <img src="registry/static/white_logo.png" alt="MCP Gateway Logo" width="100%">
+</p>
+
 # MCP Gateway Registry
 
 This application provides a web interface and API for registering and managing backend MCP (Meta-Computation Protocol) services. It acts as a central registry, health monitor, and dynamic reverse proxy configuration generator for Nginx.
