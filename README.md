@@ -1,3 +1,10 @@
+# ⚠️ ACTIVE DEVELOPMENT - WORK IN PROGRESS ⚠️
+
+> **WARNING**: This repository is under active development. Expect frequent updates and breaking changes as we improve functionality and refine APIs. We recommend pinning to specific versions for production use. Star the repository to track our progress!
+
+![Under Construction](https://img.shields.io/badge/Status-Under%20Construction-yellow)
+![Stability](https://img.shields.io/badge/API%20Stability-Experimental-orange)
+
 # MCP Gateway Registry
 
 This application provides a web interface and API for registering and managing backend services that can be proxied through a gateway (like Nginx). It allows viewing service status, descriptions, and toggling their availability (currently simulated).
