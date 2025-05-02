@@ -280,21 +280,11 @@ Use the following steps for subsequent runs once the first time installation has
 4.  **View Tools:** Click the tool count icon (🔧) in the card footer to open a modal displaying discovered tools and their schemas for healthy services.
 5.  **Filter:** Use the sidebar links to filter the displayed services.
 
-## Project Structure
+### Steps to add a new MCP server to the Gateway and Registry
 
-*   `registry/`: Main FastAPI application (`main.py`).
-    *   `servers/`: Stores JSON definitions for each registered service.
-    *   `static/`: Static assets (CSS, JS, images).
-    *   `templates/`: Jinja2 HTML templates (`index.html`, `login.html`, etc.).
-    *   `server_state.json`: Stores the enabled/disabled state (created automatically, **ignored by Git**).
-    *   `nginx_mcp_revproxy.conf`: Nginx config generated dynamically (**ignored by Git**).
-    *   `nginx_template.conf`: Template used for Nginx config generation.
-*   `.env`: Environment variables (local configuration, **ignored by Git**).
-*   `.gitignore`: Specifies files ignored by Git.
-*   `pyproject.toml`: Project metadata and dependencies.
-*   `uv.lock`: Locked dependency versions (used by `uv`).
-*   `README.md`: This file.
-*   `LICENSE`: Project license file.
+1. Option 1 (_recommended_): Use the `Register New Service` button the Registry UI. This will automatically create a JSON file for the new service, update the Nginx configuration file and reload the Nginx server.
+1. Option 2: Use `/register` API (first call the `/login` API and not the secure cookie value), see steps in the [API endpoints](#api-endpoints-brief-overview) section.
+1. Option 3: Manually add a JSON file for your service in the `registry/servers` directory and then restart the Registry process.  
 
 ## API Endpoints (Brief Overview)
 
