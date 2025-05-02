@@ -62,7 +62,7 @@ cd /app/registry
 # Use uv run to start uvicorn, ensuring it uses the correct environment
 # Run on 0.0.0.0 to be accessible within the container network
 # Use port 7860 as configured in nginx proxy_pass
-uv run uvicorn main:app --host 0.0.0.0 --port 7860 &
+sudo uv run uvicorn main:app --host 0.0.0.0 --port 7860 &
 echo "MCP Registry start command issued."
 # Give registry a moment to initialize and generate initial nginx config
 sleep 10

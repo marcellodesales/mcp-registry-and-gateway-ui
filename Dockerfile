@@ -5,7 +5,7 @@ FROM python:3.12-slim
 ENV PYTHONUNBUFFERED=1 \
     DEBIAN_FRONTEND=noninteractive
 
-# Install system dependencies: nginx, curl (for health checks in registry), procps (for ps command used in stop script), openssl (for cert generation), git (needed by uv sometimes), build-essential (for potential C extensions)
+# Install system dependencies: nginx, curl (for health checks in registry), procps (for ps command used in stop script), openssl (for cert generation), git (needed by uv sometimes), build-essential (for potential C extensions), sudo (for sudo command)
 RUN apt-get update && apt-get install -y --no-install-recommends \
     nginx \
     curl \
@@ -13,6 +13,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     openssl \
     git \
     build-essential \
+    sudo \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
