@@ -125,6 +125,7 @@ flowchart TB
 *   Python 3.12+ (or compatible version supporting FastAPI and MCP Client)
 *   [uv](https://github.com/astral-sh/uv) for package management.
 *   Nginx installed (steps for [`Ubuntu`](https://ubuntu.com/tutorials/install-and-configure-nginx#1-overview)) and configured to use the generated configuration file.
+*   **You definitely want to run your MCP Gateway and Registry over HTTPS**. Refer to [this guide](secure.md) for steps to install Nginx and secure with an SSL cert.
 *   One of the example MCP servers packaged in this repo uses the [`Polygon`](https://polygon.io/stocks) API for stock ticker data. Get an API key from [here](https://polygon.io/dashboard/signup?redirect=%2Fdashboard%2Fkeys) and place it in `servers/fininfo/.env` as `POLYGON_API_KEY=your-polygon-key`. The server will still start without the API key but you will get a 401 Unauthorized error when using the tools provided by this server.
 
 ## Installation
@@ -203,9 +204,10 @@ flowchart TB
     uv run uvicorn registry.main:app --reload --host 0.0.0.0 --port 7860    
     ```
 
-    You should be able to see the MCP Registry running on `http://localhost:7860` as shown in the following screenshot.
+    You should be able to see the MCP Registry running on `http://localhost:7860` as shown in the following screenshot. You should be able to access the Registry over HTTPS as well using the domain name you configured for your server in the [prerequisites](#Prerequisites) section.
 
     ![MCP Registry](./img/registry.png)
+
 
 ## Configuration
 
