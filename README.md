@@ -138,6 +138,29 @@ flowchart TB
     cd mcp-gateway
     ```
 
+1. **Build the Docker container to run the Gateway and Registry:**
+
+    ```bash
+    docker build -t mcp-gateway .
+
+    ```
+
+1. **Run the container:**
+
+    ```bash
+    export ADMIN_USER=admin
+    export ADMIN_PASSWORD=your-admin-password
+    export POLYGON_API_KEY=your-polygon-api-key
+    docker run -p 80:80 -p 443:443  \
+    -e ADMIN_USER=$ADMIN_USER \
+    -e ADMIN_PASSWORD=$ADMIN_PASSWORD \
+    -e POLYGON_API_KEY=$POLYGON_API_KEY \
+    -e SECRET_KEY=$(python3 -c 'import secrets; print(secrets.token_hex(32))') \
+    --name mcp-gateway-container   mcp-gateway
+    ```
+
+### Depreacted instructions, will remove
+
 1.  **Create and activate a virtual environment:**
     *   Using `uv`:
         ```bash
