@@ -147,6 +147,45 @@ flowchart TB
     ./start_all_servers.sh
     ```
 
+    You should see logs similar to the following printed out on the Terminal.
+    ```bash
+    ubuntu@ip-172-31-79-166:~/repos/mcp-gateway$ ./start_all_servers.sh 
+    Processing directory: servers/current_time (port: 8001)
+    Setting up Python environment...
+    Using CPython 3.12.3 interpreter at: /usr/bin/python3.12
+    Creating virtual environment at: .venv
+    Activate with: source .venv/bin/activate
+    Installing requirements...
+    Resolved 24 packages in 22ms
+    Installed 24 packages in 8ms
+    ...
+    Starting server on port 8001...
+    Server started with PID: 157360
+    -----------------------------------
+    Processing directory: servers/fininfo (port: 8002)
+    Setting up Python environment...
+    Using CPython 3.12.3 interpreter at: /usr/bin/python3.12
+    Creating virtual environment at: .venv
+    Activate with: source .venv/bin/activate
+    ...
+    Starting server on port 8002...
+    Server started with PID: 157397
+    -----------------------------------
+    All servers have been started.
+    To stop the servers, use: kill $(ps aux | grep 'python server.py' | grep -v grep | awk '{print $2}')
+    ubuntu@ip-172-31-79-166:~/repos/mcp-gateway$ Uninstalled 3 packages in 3ms
+    Installed 3 packages in 5ms
+    INFO:     Started server process [157378]
+    INFO:     Waiting for application startup.
+    INFO:     Application startup complete.
+    INFO:     Uvicorn running on http://0.0.0.0:8001 (Press CTRL+C to quit)
+    INFO:     Started server process [157423]
+    INFO:     Waiting for application startup.
+    INFO:     Application startup complete.
+    INFO:     Uvicorn running on http://0.0.0.0:8002 (Press CTRL+C to quit)
+    ```
+
+
     If you need to stop all servers (say to restart them later), use the following command:
     ```bash
     kill $(ps aux | grep 'python server.py' | grep -v grep | awk '{print $2}')
@@ -170,7 +209,7 @@ flowchart TB
 
 ## Configuration
 
-1.  **Environment Variables:** Create a `.env` file in the project root (`mcp-gateway/`).
+1.  **Environment Variables:** Create a `.env` file in the registry folder (`mcp-gateway/registry`).
     ```bash
     touch .env
     ```
@@ -185,7 +224,7 @@ flowchart TB
     ```
     **⚠️ IMPORTANT:** Use a strong, unpredictable `SECRET_KEY` for production environments.
 
-2.  **Service Definitions:** Services can be added via the UI after starting the application. Alternatively, you can manually create JSON files in the `registry/servers/` directory before the first run. Each file defines one service. Example (`my_service.json`):
+2.  **Service Definitions:** Services can be added via the UI after starting the application. Alternatively, you can manually create JSON files in the `registry/servers/` directory before the first run. There are two service definition files already present in this repo corresponding to the two sample MCP servers. Example (`my_service.json`):
     ```json
     {
       "server_name": "My Example Service",
@@ -193,7 +232,7 @@ flowchart TB
       "path": "/my-service",
       "proxy_pass_url": "http://localhost:8001",
       "tags": ["example", "test"],
-      "num_tools": 0,
+      "num_tools": 1,
       "num_stars": 0,
       "is_python": true,
       "license": "MIT",
@@ -202,6 +241,8 @@ flowchart TB
     ```
 
 ## Running the Application
+
+Use the following steps for subsequent runs once the first time installation has been done.
 
 1.  **Start the FastAPI server:**
     *   Using `uv`:
@@ -216,13 +257,13 @@ flowchart TB
     *   `--host 0.0.0.0`: Makes the server accessible on your network.
     *   `--port 7860`: Specifies the port.
 
-2.  **Configure Nginx:**
+1.  **Configure Nginx:**
     *   The application generates `registry/nginx_mcp_revproxy.conf` on startup.
     *   Ensure your Nginx instance is running and includes this configuration file in its main `nginx.conf` (e.g., using an `include` directive in the `http` block).
     *   Reload or restart Nginx to apply the configuration (`sudo nginx -s reload`).
     *   **Note:** Detailed Nginx setup is beyond the scope of this README. The generated file assumes Nginx is listening on a standard port (e.g., 80 or 443) and proxies requests starting with registered paths (e.g., `/my-service`) to the appropriate backend defined by `proxy_pass_url`.
 
-3.  **Access the UI:** Open your web browser and navigate to the address where Nginx is serving the application (e.g., `http://<your-nginx-server-ip>`). You should be redirected to the login page at `/login` (served by the FastAPI app). *Direct access via port 7860 is primarily for the UI itself; service proxying relies on Nginx.*
+1.  **Access the UI:** Open your web browser and navigate to the address where Nginx is serving the application (e.g., `http://<your-nginx-server-ip>`). You should be redirected to the login page at `/login` (served by the FastAPI app). *Direct access via port 7860 is primarily for the UI itself; service proxying relies on Nginx.*
 
 ## Usage
 
@@ -260,7 +301,6 @@ flowchart TB
 *   `GET /api/tools/{service_path}`: Get the discovered tool list for a service (JSON).
 *   `POST /api/refresh/{service_path}`: Manually trigger a health check/tool update.
 *   `GET /login`, `POST /login`, `POST /logout`: Authentication routes.
-*   `WS /ws/health_status`: WebSocket endpoint for real-time updates.
 
 *(Authentication via session cookie is required for most non-login routes)*
 
@@ -279,3 +319,9 @@ curl -X POST http://localhost:7860/register \
 *(Remember to replace the cookie value)*
 
 This will create a corresponding JSON file in `registry/servers/`. 
+
+## Roadmap
+
+1. Add OAUTH 2.1 support to example servers.
+1. Use GitHub API to retrieve information (license, programming language etc.) about MCP servers.
+1. Add option to deploy MCP servers.
