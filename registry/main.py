@@ -25,6 +25,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from itsdangerous import URLSafeTimedSerializer, SignatureExpired, BadSignature
 from dotenv import load_dotenv
+import subprocess # Added for nginx reload
 
 # --- MCP Client Imports --- START
 from mcp import ClientSession
@@ -180,7 +181,26 @@ def regenerate_nginx_config():
         with open(NGINX_CONFIG_PATH, 'w') as f_out:
             f_out.write(final_config)
         print("Nginx config regeneration successful.")
-        return True
+
+        # --- Reload Nginx --- START
+        try:
+            print("Attempting to reload Nginx configuration...")
+            # Ensure nginx command is available in PATH and process has permissions
+            result = subprocess.run(['nginx', '-s', 'reload'], check=True, capture_output=True, text=True)
+            print(f"Nginx reload successful. Output:\n{result.stdout}")
+            # --- Reload Nginx --- END
+            return True # Return True only if write AND reload succeed
+        except FileNotFoundError:
+             print("ERROR: 'nginx' command not found. Cannot reload configuration.")
+             return False # Indicate failure if nginx command isn't found
+        except subprocess.CalledProcessError as e:
+             print(f"ERROR: Failed to reload Nginx configuration. Return code: {e.returncode}")
+             print(f"Stderr: {e.stderr}")
+             print(f"Stdout: {e.stdout}")
+             return False # Indicate failure on reload error
+        except Exception as e: # Catch other potential exceptions like permission errors
+             print(f"ERROR: An unexpected error occurred during Nginx reload: {e}")
+             return False # Indicate failure
 
     except FileNotFoundError:
         print(f"ERROR: Nginx template file not found at {NGINX_TEMPLATE_PATH}")
