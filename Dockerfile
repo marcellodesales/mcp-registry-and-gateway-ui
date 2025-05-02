@@ -35,13 +35,14 @@ RUN cd /app && uv pip install --system --requirement pyproject.toml
 RUN mkdir -p /etc/ssl/certs /etc/ssl/private
 # Generate the certificate and key
 RUN openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
-    -keyout /etc/ssl/private/nginx-selfsigned.key \
-    -out /etc/ssl/certs/nginx-selfsigned.crt \
+    -keyout /etc/ssl/private/privkey.key \
+    -out /etc/ssl/certs/fullchain.crt \
     -subj "/C=US/ST=State/L=City/O=Organization/OU=OrgUnit/CN=localhost"
 
 # Copy the custom Nginx configuration (will be moved by entrypoint)
 # Note: We copy it here so it's part of the image layer
 COPY docker/nginx_rev_proxy.conf /app/docker/nginx_rev_proxy.conf
+
 
 # Make the entrypoint script executable
 COPY docker/entrypoint.sh /app/docker/entrypoint.sh

@@ -190,6 +190,18 @@ The Gateway and the Registry are available as a Docker container. The package in
 
     ![MCP Registry](./img/registry.png)
 
+### Running the Gateway over HTTPS
+
+1. Enable access to TCP port 443 from the IP address of your MCP client (your laptop, or anywhere) in the inbound rules in the security group associated with your EC2 instance.
+
+1. You would need to have an HTTPS certificate and private key to proceed. Let's say you use `your-mcp-server-domain-name.com` as the domain for your MCP server then you will need an SSL cert for `your-mcp-server-domain-name.com` and it will be accessible to MCP clients as `https://your-mcp-server-domain-name.com/sse`.
+
+1. Update and uncomment the following lines in the [`Dockerfile`](./Dockerfile) to point to your certificate and key file.
+   ```bash
+   COPY /path/to/certificate.pem /etc/ssl/certs/fullchain.pem
+   COPY /path/to/privkey.pem /etc/ssl/private/privkey.pem
+   ```
+1. Rebuild and redeploy the container using the steps listed above.
 
 ## Usage
 
