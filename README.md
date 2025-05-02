@@ -7,9 +7,98 @@
 ![Under Construction](https://img.shields.io/badge/Status-Under%20Construction-yellow)
 ![Stability](https://img.shields.io/badge/API%20Stability-Experimental-orange)
 
-# MCP Gateway Registry
+# MCP Gateway & Registry
 
-This application provides a web interface and API for registering and managing backend MCP (Meta-Computation Protocol) services. It acts as a central registry, health monitor, and dynamic reverse proxy configuration generator for Nginx.
+[Model Context Protocol (MCP)](https://modelcontextprotocol.io/introduction) is an open standard protocol that allows AI Models to connect with external systems, tools, and data sources. A common problem that enterprises face while using MCP servers is that there is a need for a central point of access to a curated list of MCP servers and a catalog of such servers. This is the precise problem that this application provides a solution for by implementing an **MCP Gateway & Registry**. 
+
+
+## Architecture
+
+The Gateway works by using an [Nginx server](https://docs.nginx.com/nginx/admin-guide/web-server/reverse-proxy/) as a reverse proxy, where each MCP server is handled as a different _path_ and the Nginx reverse proxy sitting between the MCP clients (contained in AI Agents for example) and backend server forwards client requests to appropriate backend servers and returns the responses back to clients. The requested resources are then returned to the client. The MCP Gateway provides a single endpoint to access multiple MCP servers and the Registry provides discoverability and management functionality for the MCP servers that an enterprise wants to use. An AI Agent written in any framework can connect to multiple MCP servers via this gateway, for example to access two MCP servers one called `weather`,  and another one called `currenttime` and agent would create an MCP client pointing `https://my-mcp-gateway.enterprise.net/weather/` and another one pointing to `https://my-mcp-gateway.enterprise.net/currenttime/`.  **This technique is able to support both SSE and Streamable HTTP transports**. 
+
+```mermaid
+flowchart TB
+    subgraph AI_Agents["AI Agents"]
+        Agent1["AI Agent 1"]
+        Agent2["AI Agent 2"]
+        Agent3["AI Agent 3"]
+        AgentN["AI Agent N"]
+    end
+
+    subgraph EC2_Gateway["<b>MCP Gateway & Registry</b> (Amazon EC2 Instance)"]
+        subgraph NGINX["NGINX Reverse Proxy"]
+            RP["Reverse Proxy Router"]
+        end
+        
+        subgraph LocalMCPServers["Local MCP Servers"]
+            MCP_Local1["MCP Server 1"]
+            MCP_Local2["MCP Server 2"]
+        end
+    end
+    
+    subgraph EKS_Cluster["Amazon EKS/EC2 Cluster"]
+        MCP_EKS1["MCP Server 3"]
+        MCP_EKS2["MCP Server 4"]
+    end
+    
+    subgraph APIGW_Lambda["Amazon API Gateway + AWS Lambda"]
+        API_GW["Amazon API Gateway"]
+        Lambda1["AWS Lambda Function 1"]
+        Lambda2["AWS Lambda Function 2"]
+    end
+    
+    subgraph External_Systems["External Data Sources & APIs"]
+        DB1[(Database 1)]
+        DB2[(Database 2)]
+        API1["External API 1"]
+        API2["External API 2"]
+        API3["External API 3"]
+    end
+    
+    %% Connections from Agents to Gateway
+    Agent1 -->|MCP Protocol<br>SSE| RP
+    Agent2 -->|MCP Protocol<br>SSE| RP
+    Agent3 -->|MCP Protocol<br>Streamable HTTP| RP
+    AgentN -->|MCP Protocol<br>Streamable HTTP| RP
+    
+    %% Connections from Gateway to MCP Servers
+    RP -->|SSE| MCP_Local1
+    RP -->|SSE| MCP_Local2
+    RP -->|SSE| MCP_EKS1
+    RP -->|SSE| MCP_EKS2
+    RP -->|Streamable HTTP| API_GW
+    
+    %% Connections within API GW + Lambda
+    API_GW --> Lambda1
+    API_GW --> Lambda2
+    
+    %% Connections to External Systems
+    MCP_Local1 -->|Tool Connection| DB1
+    MCP_Local2 -->|Tool Connection| DB2
+    MCP_EKS1 -->|Tool Connection| API1
+    MCP_EKS2 -->|Tool Connection| API2
+    Lambda1 -->|Tool Connection| API3
+
+    %% Style definitions
+    classDef agent fill:#e1f5fe,stroke:#29b6f6,stroke-width:2px
+    classDef gateway fill:#e8f5e9,stroke:#66bb6a,stroke-width:2px
+    classDef nginx fill:#f3e5f5,stroke:#ab47bc,stroke-width:2px
+    classDef mcpServer fill:#fff3e0,stroke:#ffa726,stroke-width:2px
+    classDef eks fill:#ede7f6,stroke:#7e57c2,stroke-width:2px
+    classDef apiGw fill:#fce4ec,stroke:#ec407a,stroke-width:2px
+    classDef lambda fill:#ffebee,stroke:#ef5350,stroke-width:2px
+    classDef dataSource fill:#e3f2fd,stroke:#2196f3,stroke-width:2px
+    
+    %% Apply styles
+    class Agent1,Agent2,Agent3,AgentN agent
+    class EC2_Gateway,NGINX gateway
+    class RP nginx
+    class MCP_Local1,MCP_Local2 mcpServer
+    class EKS_Cluster,MCP_EKS1,MCP_EKS2 eks
+    class API_GW apiGw
+    class Lambda1,Lambda2 lambda
+    class DB1,DB2,API1,API2,API3 dataSource
+```
 
 ## Features
 
@@ -33,36 +122,51 @@ This application provides a web interface and API for registering and managing b
 
 ## Prerequisites
 
-*   Python 3.11+ (or compatible version supporting FastAPI and MCP Client)
-*   [uv](https://github.com/astral-sh/uv) (recommended) or `pip` for package management.
-*   Nginx (or another reverse proxy) installed and configured to use the generated configuration file.
+*   Python 3.12+ (or compatible version supporting FastAPI and MCP Client)
+*   [uv](https://github.com/astral-sh/uv) for package management.
+*   Nginx installed (steps for [`Ubuntu`](https://ubuntu.com/tutorials/install-and-configure-nginx#1-overview)) and configured to use the generated configuration file.
+*   One of the example MCP servers packaged in this repo uses the [`Polygon`](https://polygon.io/stocks) API for stock ticker data. Get an API key from [here](https://polygon.io/dashboard/signup?redirect=%2Fdashboard%2Fkeys) and place it in `servers/fininfo/.env` as `POLYGON_API_KEY=your-polygon-key`. The server will still start without the API key but you will get a 401 Unauthorized error when using the tools provided by this server.
 
 ## Installation
 
 1.  **Clone the repository:**
     ```bash
-    git clone <your-repo-url>
+    git clone https://github.com/aarora79/mcp-gateway.git
     cd mcp-gateway
     ```
 
-2.  **Create and activate a virtual environment (recommended):**
-    *   Using `venv`:
-        ```bash
-        python -m venv .venv
-        source .venv/bin/activate  # Linux/macOS
-        # .venv\Scripts\activate  # Windows
-        ```
-    *   `uv` handles environments automatically via `uv run` or `uv pip sync`.
-
-3.  **Install dependencies:** (Defined in `pyproject.toml` and locked in `uv.lock`)
+1.  **Create and activate a virtual environment:**
     *   Using `uv`:
         ```bash
-        uv pip sync
+        uv venv --python 3.12 && source .venv/bin/activate && uv pip install --requirement pyproject.toml
         ```
-    *   Using `pip`:
-        ```bash
-        pip install .
-        ```
+
+1. **Start the example MCP servers packaged with this repo:**
+    This command will start all packaged example MCP servers as background processes. Each server uses SSE transport and uses ports 8001, 8002 and so on so forth.
+    ```bash
+    ./start_all_servers.sh
+    ```
+
+    If you need to stop all servers (say to restart them later), use the following command:
+    ```bash
+    kill $(ps aux | grep 'python server.py' | grep -v grep | awk '{print $2}')
+    ```
+
+1. **Start the MCP Registry:**
+
+    1. Copy `.env.template` to `.env` and set the secret key, admin username and password in the `.env` file, see [configuration](#configuration).
+    ```bash
+    cp registry/env.template registry/.env
+    ```
+
+    1. Start the MCP Registry.
+    ```bash
+    uv run uvicorn registry.main:app --reload --host 0.0.0.0 --port 7860    
+    ```
+
+    You should be able to see the MCP Registry running on `http://localhost:7860` as shown in the following screenshot.
+
+    ![MCP Registry](./img/registry.png)
 
 ## Configuration
 

@@ -1,8 +1,8 @@
 {
+  "/fininfo": true,
   "/test-service": false,
-  "/legacy/billing": false,
-  "/currenttime": false,
   "/costexplorer": true,
   "/test-service-2": false,
-  "/fininfo": false
+  "/legacy/billing": false,
+  "/currenttime": true
 }

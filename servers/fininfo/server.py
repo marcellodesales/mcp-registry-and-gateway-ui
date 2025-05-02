@@ -22,6 +22,7 @@ class Constants(BaseModel):
     # Using ClassVar to define class-level constants
     DESCRIPTION: ClassVar[str] = "Fininfo MCP Server"
     MAX_RETRIES: ClassVar[int] = 3
+    RETRY_DELAY: ClassVar[float] = 1
     DEFAULT_TIMEOUT: ClassVar[float] = 1
     DEFAULT_MCP_TRANSPORT: ClassVar[str] = "sse"
     DEFAULT_MCP_SEVER_LISTEN_PORT: ClassVar[str] = "8000"
@@ -154,7 +155,7 @@ def get_stock_aggregates(params: StockAggregateParams) -> Dict[str, Any]:
             print(f"Retrying in {Constants.RETRY_DELAY} seconds...")
 
             # Wait before retrying
-            time.sleep(params.RETRY_DELAY)
+            time.sleep(Constants.RETRY_DELAY)
 
 
 @mcp.tool()
