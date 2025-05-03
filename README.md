@@ -194,19 +194,26 @@ The Gateway and the Registry are available as a Docker container. The package in
 
 1. Enable access to TCP port 443 from the IP address of your MCP client (your laptop, or anywhere) in the inbound rules in the security group associated with your EC2 instance.
 
-1. You would need to have an HTTPS certificate and private key to proceed. Let's say you use `your-mcp-server-domain-name.com` as the domain for your MCP server then you will need an SSL cert for `your-mcp-server-domain-name.com` and it will be accessible to MCP clients as `https://your-mcp-server-domain-name.com/sse`.
+1. You would need to have an HTTPS certificate and private key to proceed. Let's say you use `your-mcp-gateway.com` as the domain for your MCP server then you will need an SSL cert for `your-mcp-gateway.com` and MCP servers behind the Gateway will be accessible to MCP clients as `https://your-mcp-gateway.com/mcp-server-name/sse`.
 
-1. Update and uncomment the following lines in the [`Dockerfile`](./Dockerfile) to point to your certificate and key file.
-   ```bash
-   COPY /path/to/certificate.pem /etc/ssl/certs/fullchain.pem
-   COPY /path/to/privkey.pem /etc/ssl/private/privkey.pem
-   ```
-1. Rebuild and redeploy the container using the steps listed above.
+1. Rebuild the container using the same command line as before.
+
+1. Run the container with the `-v` switch to map the local folder containing the cert and the private key to the container. Replace `/path/to/certs/` and `/path/private` as appropriate in the command provided below.
+
+    ```bash
+    docker run -p 80:80 -p 443:443 -p 7860:7860 \
+    -e ADMIN_USER=$ADMIN_USER \
+    -e ADMIN_PASSWORD=$ADMIN_PASSWORD \
+    -e POLYGON_API_KEY=$POLYGON_API_KEY \
+    -e SECRET_KEY=$(python3 -c 'import secrets; print(secrets.token_hex(32))') \
+    -v /path/to/certs:/etc/ssl/certs \
+    -v /path/to/private:/etc/ssl/private \
+    --name mcp-gateway-container   mcp-gateway
+    ```
 
 ## Usage
 
-1.  **Login:** Use the `ADMIN_USER` and `ADMIN_PASSWORD` from your `.env` file.
-2.  **Register Service:** Use the "Register New Service" form in the UI (or the API).
+1.  **Login:** Use the `ADMIN_USER` and `ADMIN_PASSWORD` specified while starting the Gateway container.
 3.  **Manage Services:**
     *   Toggle the Enabled/Disabled switch. The Nginx config automatically comments/uncomments the relevant `location` block.
     *   Click "Modify" to edit service details.
@@ -216,9 +223,34 @@ The Gateway and the Registry are available as a Docker container. The package in
 
 ### Steps to add a new MCP server to the Gateway and Registry
 
-1. Option 1 (_recommended_): Use the `Register New Service` button the Registry UI. This will automatically create a JSON file for the new service, update the Nginx configuration file and reload the Nginx server.
-1. Option 2: Use `/register` API (first call the `/login` API and not the secure cookie value), see steps in the [API endpoints](#api-endpoints-brief-overview) section.
-1. Option 3: Manually add a JSON file for your service in the `registry/servers` directory and then restart the Registry process.  
+1. Option 1: Use `/register` API (first call the `/login` API and not the secure cookie value), see steps in the [API endpoints](#api-endpoints-brief-overview) section. Note the value for the `mcp_gateway_session` cookie from the `/login` API and then use it in `/register` API.
+    ```bash
+    # set the passw
+    curl -X POST \
+      -H "Content-Type: application/x-www-form-urlencoded" \
+      -d "username=admin&password=$ADMIN_PASSWORD" \
+      -v \
+      http://localhost:7860/login
+    ```
+
+    Use the value of the `mcp_gateway_session` in the following command.
+    ```bash
+    # Set the session cookie value in a variable
+    SESSION_COOKIE="session-cookie-from-login"
+
+    # Use the variable in the curl command
+    curl -X POST http://localhost:7860/register \
+    -H "Content-Type: application/x-www-form-urlencoded" \
+    -H "Cookie: mcp_gateway_session=$SESSION_COOKIE" \
+    --data-urlencode "name=My New Service" \
+    --data-urlencode "description=A fantastic new service" \
+    --data-urlencode "path=/new-service" \
+    --data-urlencode "tags=new,experimental" \
+    --data-urlencode "license=MIT" \
+    --data-urlencode "is_python=true"
+    ```
+
+1. Option 2: Manually add a JSON file for your service in the `registry/servers` directory and then restart the Registry process.  
 
 ## API Endpoints (Brief Overview)
 
@@ -232,24 +264,9 @@ The Gateway and the Registry are available as a Docker container. The package in
 
 *(Authentication via session cookie is required for most non-login routes)*
 
-```bash
-curl -X POST http://localhost:7860/register \
-  -H "Content-Type: application/x-www-form-urlencoded" \
-  -H "Cookie: mcp_gateway_session=..." \
-  --data-urlencode "name=My New Service" \
-  --data-urlencode "description=A fantastic new service" \
-  --data-urlencode "path=/new-service" \
-  --data-urlencode "tags=new,experimental" \
-  --data-urlencode "license=MIT" \
-  --data-urlencode "is_python=true"
-```
-
-*(Remember to replace the cookie value)*
-
-This will create a corresponding JSON file in `registry/servers/`. 
-
 ## Roadmap
 
-1. Add OAUTH 2.1 support to example servers.
+1. Store the server information in persistent storage.
+1. Add OAUTH 2.1 support to Gateway and Registry.
 1. Use GitHub API to retrieve information (license, programming language etc.) about MCP servers.
 1. Add option to deploy MCP servers.
