@@ -138,6 +138,12 @@ The Gateway and the Registry are available as a Docker container. The package in
     cd mcp-gateway
     ```
 
+1. **Create local directories for saving MCP server logs and run-time data:**
+    ```bash
+    sudo mkdir /opt/mcp-gateway/servers
+    sudo mkdir /var/log/mcp-gateway
+    ```
+
 1. **Build the Docker container to run the Gateway and Registry:**
 
     ```bash
@@ -159,6 +165,8 @@ The Gateway and the Registry are available as a Docker container. The package in
     -e ADMIN_PASSWORD=$ADMIN_PASSWORD \
     -e POLYGON_API_KEY=$POLYGON_API_KEY \
     -e SECRET_KEY=$(python3 -c 'import secrets; print(secrets.token_hex(32))') \
+    -v /var/log/mcp-gateway:/app/logs \
+    -v /opt/mcp-gateway/servers:/app/registry/servers 
     --name mcp-gateway-container mcp-gateway
     ```
 
@@ -208,6 +216,8 @@ The Gateway and the Registry are available as a Docker container. The package in
     -e SECRET_KEY=$(python3 -c 'import secrets; print(secrets.token_hex(32))') \
     -v /path/to/certs:/etc/ssl/certs \
     -v /path/to/private:/etc/ssl/private \
+    -v /var/log/mcp-gateway:/app/logs \
+    -v /opt/mcp-gateway/servers:/app/registry/servers 
     --name mcp-gateway-container   mcp-gateway
     ```
 
