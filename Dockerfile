@@ -35,8 +35,8 @@ RUN cd /app && uv pip install --system --requirement pyproject.toml
 RUN mkdir -p /etc/ssl/certs /etc/ssl/private
 # Generate the certificate and key
 RUN openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
-    -keyout /etc/ssl/private/privkey.key \
-    -out /etc/ssl/certs/fullchain.crt \
+    -keyout /etc/ssl/private/privkey.pem \
+    -out /etc/ssl/certs/fullchain.pem \
     -subj "/C=US/ST=State/L=City/O=Organization/OU=OrgUnit/CN=localhost"
 
 # Copy the custom Nginx configuration (will be moved by entrypoint)
