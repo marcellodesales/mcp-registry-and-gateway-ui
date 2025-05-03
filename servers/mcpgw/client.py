@@ -1,0 +1,132 @@
+"""
+Example MCP client for the mcpgw server.
+
+This client connects to the mcpgw MCP server, lists its capabilities,
+and demonstrates calling the 'get_server_details' tool.
+
+Usage:
+  python client.py [--host HOSTNAME] [--port PORT] [--server-name SERVER_NAME]
+
+Example:
+  # Connect to mcpgw server running locally on default port 8001
+  python client.py
+
+  # Connect to mcpgw server running on a specific host/port
+  python client.py --host myregistry.com --port 8001
+"""
+
+import argparse
+import json # Import json for pretty printing
+from mcp import ClientSession
+from mcp.client.sse import sse_client
+
+
+async def run(server_url, args):
+    print(f"Connecting to MCP server at: {server_url}")
+
+    async with sse_client(server_url) as (read, write):
+        async with ClientSession(read, write, sampling_callback=None) as session:
+            # Initialize the connection
+            await session.initialize()
+
+            # List available prompts (mcpgw server likely has none)
+            prompts = await session.list_prompts()
+            print("=" * 50)
+            print("Available prompts:")
+            print("=" * 50)
+            print(prompts)
+            print("=" * 50)
+
+            # List available resources (mcpgw server likely has none)
+            resources = await session.list_resources()
+            print("=" * 50)
+            print("Available resources:")
+            print("=" * 50)
+            print(resources)
+            print("=" * 50)
+
+            # List available tools (should show the registry interaction tools)
+            tools = await session.list_tools()
+            print("=" * 50)
+            print("Available tools:")
+            print("=" * 50)
+            print(tools)
+            print("=" * 50)
+
+            # --- Example: Call the get_server_details tool ---
+            # Let's try to get details for the '/current_time' server (assuming it's registered)
+            target_service_path = "/currenttime"
+            print(f"\nCalling 'get_server_details' tool for service_path='{target_service_path}'")
+
+            try:
+                # The 'get_server_details' tool expects parameters nested under 'params'
+                tool_params = {"service_path": target_service_path, "username": args.username, "password": args.password}
+                result = await session.call_tool(
+                    "get_server_details", arguments={"params": tool_params}
+                )
+
+                # Display the results (which should be the JSON response from the registry)
+                print("=" * 50)
+                print(f"Result for get_server_details('{target_service_path}'):")
+                print("=" * 50)
+                # The result content is usually a list of MessagePart objects
+                full_response_text = "".join(part.text for part in result.content if hasattr(part, 'text'))
+                try:
+                    # Attempt to parse and pretty-print if it's JSON
+                    parsed_json = json.loads(full_response_text)
+                    print(json.dumps(parsed_json, indent=2))
+                except json.JSONDecodeError:
+                    # Otherwise, just print the raw text
+                    print(full_response_text)
+                print("=" * 50)
+
+            except Exception as e:
+                print(f"Error calling 'get_server_details': {e}")
+            # --- End Example ---
+
+
+if __name__ == "__main__":
+    # Set up command-line argument parsing
+    parser = argparse.ArgumentParser(
+        description="MCP Client for the MCP Gateway Interaction Server (mcpgw)" # Updated description
+    )
+    parser.add_argument(
+        "--host", type=str, default="localhost", help="Hostname of the MCP server"
+    )
+    # Default port changed to 8001 as per server.py Constants
+    parser.add_argument("--port", type=int, default=8001, help="Port of the MCP server")
+    parser.add_argument(
+        "--server-name",
+        type=str,
+        default="mcpgw", # Default server name changed
+        help='Name of the MCP server to connect to (e.g., "mcpgw")',
+    )
+    parser.add_argument(
+        "--username",
+        type=str,
+        default="admin", # Default server name changed
+        help='Username for the MCP Gateway (default: "admin")',
+    )
+    parser.add_argument(
+        "--password",
+        type=str,        
+        help='Password for the MCP Gateway',
+    )
+
+    # Parse the arguments
+    args = parser.parse_args()
+
+    # Build the server URL
+    secure = ""
+    # Automatically turn to https if port is 443
+    if args.port == 443:
+        secure = "s"
+
+    # Construct URL based on whether server_name is provided (it defaults to mcpgw now)
+    # The server itself doesn't expect the server name in the path for /sse
+    server_url = f"http{secure}://{args.host}:{args.port}/sse"
+
+    # Run the async main function
+    import asyncio
+
+    asyncio.run(run(server_url, args))

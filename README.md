@@ -210,15 +210,15 @@ The Gateway and the Registry are available as a Docker container. The package in
 
     ```bash
     docker run -p 80:80 -p 443:443 -p 7860:7860 \
-    -e ADMIN_USER=$ADMIN_USER \
-    -e ADMIN_PASSWORD=$ADMIN_PASSWORD \
-    -e POLYGON_API_KEY=$POLYGON_API_KEY \
-    -e SECRET_KEY=$(python3 -c 'import secrets; print(secrets.token_hex(32))') \
-    -v /path/to/certs:/etc/ssl/certs \
-    -v /path/to/private:/etc/ssl/private \
-    -v /var/log/mcp-gateway:/app/logs \
-    -v /opt/mcp-gateway/servers:/app/registry/servers 
-    --name mcp-gateway-container   mcp-gateway
+      -e ADMIN_USER=$ADMIN_USER \
+      -e ADMIN_PASSWORD=$ADMIN_PASSWORD \
+      -e POLYGON_API_KEY=$POLYGON_API_KEY \
+      -e SECRET_KEY=$(python3 -c 'import secrets; print(secrets.token_hex(32))') \
+      -v /path/to/certs:/etc/ssl/certs \
+      -v /path/to/private:/etc/ssl/private \
+      -v /var/log/mcp-gateway:/app/logs \
+      -v /opt/mcp-gateway/servers:/app/registry/servers 
+      --name mcp-gateway-container   mcp-gateway
     ```
 
 ## Usage
