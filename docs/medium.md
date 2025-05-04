@@ -68,34 +68,81 @@ flowchart TB
         AgentN["AI Agent N"]
     end
 
-    subgraph EC2_Gateway["<b>MCP Gateway & Registry</b> (e.g., EC2 Instance)"]
+    subgraph EC2_Gateway["<b>MCP Gateway & Registry</b> (Amazon EC2 Instance)"]
         subgraph NGINX["NGINX Reverse Proxy"]
             RP["Reverse Proxy Router"]
         end
-        RegistryUI[("Registry & UI (FastAPI)")]
+        
+        subgraph LocalMCPServers["Local MCP Servers"]
+            MCP_Local1["MCP Server 1"]
+            MCP_Local2["MCP Server 2"]
+        end
     end
     
-    subgraph BackendMCPServers["Backend MCP Servers (Anywhere)"]
-        MCP_Server1["MCP Server 1<br>(/service1)"]
-        MCP_Server2["MCP Server 2<br>(/service2)"]
-        MCP_ServerN["MCP Server N<br>(/serviceN)"]
+    subgraph EKS_Cluster["Amazon EKS/EC2 Cluster"]
+        MCP_EKS1["MCP Server 3"]
+        MCP_EKS2["MCP Server 4"]
     end
-        
-    %% Connections
-    AI_Agents -- MCP Requests --> RP
-    RP -- Routes based on path --> BackendMCPServers
-    RegistryUI -- Manages/Monitors --> BackendMCPServers
-    RegistryUI -- Updates --> RP[Nginx Config]
-    AI_Agents -- Can Query (Optional) --> RegistryUI[APIs]
+    
+    subgraph APIGW_Lambda["Amazon API Gateway + AWS Lambda"]
+        API_GW["Amazon API Gateway"]
+        Lambda1["AWS Lambda Function 1"]
+        Lambda2["AWS Lambda Function 2"]
+    end
+    
+    subgraph External_Systems["External Data Sources & APIs"]
+        DB1[(Database 1)]
+        DB2[(Database 2)]
+        API1["External API 1"]
+        API2["External API 2"]
+        API3["External API 3"]
+    end
+    
+    %% Connections from Agents to Gateway
+    Agent1 -->|MCP Protocol<br>SSE| RP
+    Agent2 -->|MCP Protocol<br>SSE| RP
+    Agent3 -->|MCP Protocol<br>Streamable HTTP| RP
+    AgentN -->|MCP Protocol<br>Streamable HTTP| RP
+    
+    %% Connections from Gateway to MCP Servers
+    RP -->|SSE| MCP_Local1
+    RP -->|SSE| MCP_Local2
+    RP -->|SSE| MCP_EKS1
+    RP -->|SSE| MCP_EKS2
+    RP -->|Streamable HTTP| API_GW
+    
+    %% Connections within API GW + Lambda
+    API_GW --> Lambda1
+    API_GW --> Lambda2
+    
+    %% Connections to External Systems
+    MCP_Local1 -->|Tool Connection| DB1
+    MCP_Local2 -->|Tool Connection| DB2
+    MCP_EKS1 -->|Tool Connection| API1
+    MCP_EKS2 -->|Tool Connection| API2
+    Lambda1 -->|Tool Connection| API3
 
-    classDef gateway fill:#e8f5e9,stroke:#66bb6a,stroke-width:2px
-    classDef backend fill:#fff3e0,stroke:#ffa726,stroke-width:2px
+    %% Style definitions
     classDef agent fill:#e1f5fe,stroke:#29b6f6,stroke-width:2px
-
-    class EC2_Gateway, NGINX, RP, RegistryUI gateway;
-    class BackendMCPServers, MCP_Server1, MCP_Server2, MCP_ServerN backend;
-    class AI_Agents, Agent1, Agent2, Agent3, AgentN agent;
+    classDef gateway fill:#e8f5e9,stroke:#66bb6a,stroke-width:2px
+    classDef nginx fill:#f3e5f5,stroke:#ab47bc,stroke-width:2px
+    classDef mcpServer fill:#fff3e0,stroke:#ffa726,stroke-width:2px
+    classDef eks fill:#ede7f6,stroke:#7e57c2,stroke-width:2px
+    classDef apiGw fill:#fce4ec,stroke:#ec407a,stroke-width:2px
+    classDef lambda fill:#ffebee,stroke:#ef5350,stroke-width:2px
+    classDef dataSource fill:#e3f2fd,stroke:#2196f3,stroke-width:2px
+    
+    %% Apply styles
+    class Agent1,Agent2,Agent3,AgentN agent
+    class EC2_Gateway,NGINX gateway
+    class RP nginx
+    class MCP_Local1,MCP_Local2 mcpServer
+    class EKS_Cluster,MCP_EKS1,MCP_EKS2 eks
+    class API_GW apiGw
+    class Lambda1,Lambda2 lambda
+    class DB1,DB2,API1,API2,API3 dataSource
 ```
+
 
 **(Caption:** High-level architecture of the MCP Gateway & Registry, routing requests from AI Agents to backend MCP Servers.)
 
