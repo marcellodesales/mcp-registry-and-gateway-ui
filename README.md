@@ -166,7 +166,7 @@ The Gateway and the Registry are available as a Docker container. The package in
     -e POLYGON_API_KEY=$POLYGON_API_KEY \
     -e SECRET_KEY=$(python3 -c 'import secrets; print(secrets.token_hex(32))') \
     -v /var/log/mcp-gateway:/app/logs \
-    -v /opt/mcp-gateway/servers:/app/registry/servers 
+    -v /opt/mcp-gateway/servers:/app/registry/servers \
     --name mcp-gateway-container mcp-gateway
     ```
 
@@ -217,7 +217,7 @@ The Gateway and the Registry are available as a Docker container. The package in
       -v /path/to/certs:/etc/ssl/certs \
       -v /path/to/private:/etc/ssl/private \
       -v /var/log/mcp-gateway:/app/logs \
-      -v /opt/mcp-gateway/servers:/app/registry/servers 
+      -v /opt/mcp-gateway/servers:/app/registry/servers \
       --name mcp-gateway-container   mcp-gateway
     ```
 
