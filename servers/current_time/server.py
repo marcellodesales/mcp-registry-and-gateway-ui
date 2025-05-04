@@ -7,8 +7,17 @@ import time
 import random
 import requests
 import argparse
+import logging
 from mcp.server.fastmcp import FastMCP
 from pydantic import BaseModel, Field
+
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s.%(msecs)03d - PID:%(process)d - %(filename)s:%(lineno)d - %(name)s - %(levelname)s - %(message)s',
+    datefmt='%Y-%m-%d %H:%M:%S'
+)
+logger = logging.getLogger(__name__)
 
 
 class TZ_Name(BaseModel):
@@ -115,8 +124,8 @@ def current_time_by_timezone(params: TZ_Name) -> str:
                     f"Failed to get time after {max_retries} attempts: {str(e)}"
                 )
 
-            print(f"Request failed (attempt {attempt + 1}/{max_retries}): {str(e)}")
-            print(f"Retrying in {delay:.2f} seconds...")
+            logger.warning(f"Request failed (attempt {attempt + 1}/{max_retries}): {str(e)}")
+            logger.info(f"Retrying in {delay:.2f} seconds...")
 
             # Wait before retrying
             time.sleep(delay)

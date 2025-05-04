@@ -140,7 +140,8 @@ The Gateway and the Registry are available as a Docker container. The package in
 
 1. **Create local directories for saving MCP server logs and run-time data:**
     ```bash
-    sudo mkdir /opt/mcp-gateway/servers
+    sudo mkdir -p /opt/mcp-gateway/servers
+    sudo cp -r registry/servers /opt/mcp-gateway/
     sudo mkdir /var/log/mcp-gateway
     ```
 
@@ -233,36 +234,42 @@ The Gateway and the Registry are available as a Docker container. The package in
 
 ### Steps to add a new MCP server to the Gateway and Registry
 
-1. Option 1: Use `/register` API (first call the `/login` API and not the secure cookie value), see steps in the [API endpoints](#api-endpoints-brief-overview) section. Note the value for the `mcp_gateway_session` cookie from the `/login` API and then use it in `/register` API.
+1. Option 1 (_recommended_): Use `Cursor` or your favorite MCP host of choice that supports SSE to add the MCP Gateway as a server as an MCP server and then simple ask it in naturla language to register a new MCP server and follow the prompts.
+
+1. Option 2: Use `/register` API (first call the `/login` API and get the secure cookie value), see steps in the [API endpoints](#api-endpoints-brief-overview) section. Note the value for the `mcp_gateway_session` cookie from the `/login` API and then use it in `/register` API.
     ```bash
-    # set the passw
+    # Login to get the session cookie
     curl -X POST \
       -H "Content-Type: application/x-www-form-urlencoded" \
       -d "username=admin&password=$ADMIN_PASSWORD" \
-      -v \
+      -c cookies.txt \
       http://localhost:7860/login
     ```
 
-    Use the value of the `mcp_gateway_session` in the following command.
+    Use the value of the `mcp_gateway_session` in `cookies.txt` in the following command.
     ```bash
     # Set the session cookie value in a variable
     SESSION_COOKIE="session-cookie-from-login"
 
     # Use the variable in the curl command
     curl -X POST http://localhost:7860/register \
-    -H "Content-Type: application/x-www-form-urlencoded" \
-    -H "Cookie: mcp_gateway_session=$SESSION_COOKIE" \
-    --data-urlencode "name=My New Service" \
-    --data-urlencode "description=A fantastic new service" \
-    --data-urlencode "path=/new-service" \
-    --data-urlencode "tags=new,experimental" \
-    --data-urlencode "license=MIT" \
-    --data-urlencode "is_python=true"
+      -H "Content-Type: application/x-www-form-urlencoded" \
+      -b cookies.txt \
+      --data-urlencode "name=My New Service" \
+      --data-urlencode "description=A fantastic new service" \
+      --data-urlencode "path=/new-service" \
+      --data-urlencode "proxy_pass_url=http://localhost:8004" \
+      --data-urlencode "tags=new,experimental" \
+      --data-urlencode "num_tools=2" \
+      --data-urlencode "num_stars=0" \
+      --data-urlencode "is_python=true" \
+      --data-urlencode "license=MIT"
     ```
 
-1. Option 2: Manually add a JSON file for your service in the `registry/servers` directory and then restart the Registry process.  
 
 ## API Endpoints (Brief Overview)
+
+See the full API spec [here](./registry_api.md).
 
 *   `POST /register`: Register a new service (form data).
 *   `POST /toggle/{service_path}`: Enable/disable a service (form data).
@@ -271,6 +278,7 @@ The Gateway and the Registry are available as a Docker container. The package in
 *   `GET /api/tools/{service_path}`: Get the discovered tool list for a service (JSON).
 *   `POST /api/refresh/{service_path}`: Manually trigger a health check/tool update.
 *   `GET /login`, `POST /login`, `POST /logout`: Authentication routes.
+*   `WebSocket /ws/health_status`: Real-time connection for receiving server health status updates.
 
 *(Authentication via session cookie is required for most non-login routes)*
 

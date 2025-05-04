@@ -17,12 +17,21 @@ Example:
 
 import argparse
 import json # Import json for pretty printing
+import logging
 from mcp import ClientSession
 from mcp.client.sse import sse_client
 
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s.%(msecs)03d - PID:%(process)d - %(filename)s:%(lineno)d - %(name)s - %(levelname)s - %(message)s',
+    datefmt='%Y-%m-%d %H:%M:%S'
+)
+logger = logging.getLogger(__name__)
+
 
 async def run(server_url, args):
-    print(f"Connecting to MCP server at: {server_url}")
+    logger.info(f"Connecting to MCP server at: {server_url}")
 
     async with sse_client(server_url) as (read, write):
         async with ClientSession(read, write, sampling_callback=None) as session:
@@ -31,32 +40,32 @@ async def run(server_url, args):
 
             # List available prompts (mcpgw server likely has none)
             prompts = await session.list_prompts()
-            print("=" * 50)
-            print("Available prompts:")
-            print("=" * 50)
-            print(prompts)
-            print("=" * 50)
+            logger.info("=" * 50)
+            logger.info("Available prompts:")
+            logger.info("=" * 50)
+            logger.info(f"{prompts}")
+            logger.info("=" * 50)
 
             # List available resources (mcpgw server likely has none)
             resources = await session.list_resources()
-            print("=" * 50)
-            print("Available resources:")
-            print("=" * 50)
-            print(resources)
-            print("=" * 50)
+            logger.info("=" * 50)
+            logger.info("Available resources:")
+            logger.info("=" * 50)
+            logger.info(f"{resources}")
+            logger.info("=" * 50)
 
             # List available tools (should show the registry interaction tools)
             tools = await session.list_tools()
-            print("=" * 50)
-            print("Available tools:")
-            print("=" * 50)
-            print(tools)
-            print("=" * 50)
+            logger.info("=" * 50)
+            logger.info("Available tools:")
+            logger.info("=" * 50)
+            logger.info(f"{tools}")
+            logger.info("=" * 50)
 
             # --- Example: Call the get_server_details tool ---
             # Let's try to get details for the '/current_time' server (assuming it's registered)
             target_service_path = "/all"
-            print(f"\nCalling 'get_server_details' tool for service_path='{target_service_path}'")
+            logger.info(f"\nCalling 'get_server_details' tool for service_path='{target_service_path}'")
 
             try:
                 # Pass parameters directly to the get_server_details tool
@@ -69,27 +78,27 @@ async def run(server_url, args):
                 )
 
                 # Display the results (which should be the JSON response from the registry)
-                print("=" * 50)
-                print(f"Result for get_server_details('{target_service_path}'):")
-                print("=" * 50)
+                logger.info("=" * 50)
+                logger.info(f"Result for get_server_details('{target_service_path}'):")
+                logger.info("=" * 50)
                 # The result content is usually a list of MessagePart objects
                 full_response_text = "".join(part.text for part in result.content if hasattr(part, 'text'))
                 try:
                     # Attempt to parse and pretty-print if it's JSON
                     parsed_json = json.loads(full_response_text)
-                    print(json.dumps(parsed_json, indent=2))
+                    logger.info(json.dumps(parsed_json, indent=2))
                 except json.JSONDecodeError:
-                    # Otherwise, just print the raw text
-                    print(full_response_text)
-                print("=" * 50)
+                    # Otherwise, just log the raw text
+                    logger.info(full_response_text)
+                logger.info("=" * 50)
 
             except Exception as e:
-                print(f"Error calling 'get_server_details': {e}")
+                logger.error(f"Error calling 'get_server_details': {e}")
             # --- End Example ---
 
             # --- Example: Call the register_service tool (if enabled) ---
             if args.test_register_service and args.test_register_service.lower() in ["true", "yes"]:
-                print("\nCalling 'register_service' tool with hardcoded parameters")
+                logger.info("\nCalling 'register_service' tool with hardcoded parameters")
 
                 try:
                     # Pass hardcoded parameters to the register_service tool
@@ -110,25 +119,25 @@ async def run(server_url, args):
                     )
 
                     # Display the results
-                    print("=" * 50)
-                    print("Result for register_service:")
-                    print("=" * 50)
+                    logger.info("=" * 50)
+                    logger.info("Result for register_service:")
+                    logger.info("=" * 50)
                     # The result content is usually a list of MessagePart objects
                     full_response_text = "".join(part.text for part in result.content if hasattr(part, 'text'))
                     try:
                         # Attempt to parse and pretty-print if it's JSON
                         parsed_json = json.loads(full_response_text)
-                        print(json.dumps(parsed_json, indent=2))
+                        logger.info(json.dumps(parsed_json, indent=2))
                     except json.JSONDecodeError:
-                        # Otherwise, just print the raw text
-                        print(full_response_text)
-                    print("=" * 50)
+                        # Otherwise, just log the raw text
+                        logger.info(full_response_text)
+                    logger.info("=" * 50)
 
                 except Exception as e:
-                    print(f"Error calling 'register_service': {e}")
+                    logger.error(f"Error calling 'register_service': {e}")
                 # --- End Example ---
             else:
-                print("\nSkipping 'register_service' tool example (use --test-register-service=true to enable)")
+                logger.info("\nSkipping 'register_service' tool example (use --test-register-service=true to enable)")
 
 
 if __name__ == "__main__":

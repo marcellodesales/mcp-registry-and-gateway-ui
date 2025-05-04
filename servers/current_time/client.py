@@ -11,12 +11,21 @@ Example:
 """
 
 import argparse
+import logging
 from mcp import ClientSession
 from mcp.client.sse import sse_client
 
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s.%(msecs)03d - PID:%(process)d - %(filename)s:%(lineno)d - %(name)s - %(levelname)s - %(message)s',
+    datefmt='%Y-%m-%d %H:%M:%S'
+)
+logger = logging.getLogger(__name__)
+
 
 async def run(server_url, args):
-    print(f"Connecting to MCP server at: {server_url}")
+    logger.info(f"Connecting to MCP server at: {server_url}")
 
     async with sse_client(server_url) as (read, write):
         async with ClientSession(read, write, sampling_callback=None) as session:
@@ -25,42 +34,42 @@ async def run(server_url, args):
 
             # List available prompts
             prompts = await session.list_prompts()
-            print("=" * 50)
-            print("Available prompts:")
-            print("=" * 50)
-            print(prompts)
-            print("=" * 50)
+            logger.info("=" * 50)
+            logger.info("Available prompts:")
+            logger.info("=" * 50)
+            logger.info(f"{prompts}")
+            logger.info("=" * 50)
 
             # List available resources
             resources = await session.list_resources()
-            print("=" * 50)
-            print("Available resources:")
-            print("=" * 50)
-            print(resources)
-            print("=" * 50)
+            logger.info("=" * 50)
+            logger.info("Available resources:")
+            logger.info("=" * 50)
+            logger.info(f"{resources}")
+            logger.info("=" * 50)
 
             # List available tools
             tools = await session.list_tools()
-            print("=" * 50)
-            print("Available tools:")
-            print("=" * 50)
-            print(tools)
-            print("=" * 50)
+            logger.info("=" * 50)
+            logger.info("Available tools:")
+            logger.info("=" * 50)
+            logger.info(f"{tools}")
+            logger.info("=" * 50)
 
             # Call the current_time_by_timezone tool
             tz_name = "Africa/Cairo"
-            print(f"\nCalling current_time_by_timezone tool with tz_name={tz_name}")
+            logger.info(f"\nCalling current_time_by_timezone tool with tz_name={tz_name}")
             result = await session.call_tool(
                 "current_time_by_timezone", arguments={"params": {"tz_name": tz_name}}
             )
 
             # Display the results
-            print("=" * 50)
-            print("Results:")
-            print("=" * 50)
+            logger.info("=" * 50)
+            logger.info("Results:")
+            logger.info("=" * 50)
             for r in result.content:
-                print(r.text)
-            print("=" * 50)
+                logger.info(r.text)
+            logger.info("=" * 50)
 
 
 if __name__ == "__main__":

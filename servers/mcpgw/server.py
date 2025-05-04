@@ -6,10 +6,21 @@ import os
 import httpx # Use httpx for async requests
 import argparse
 import asyncio # Added for locking
+import logging
+import json
+import websockets # For WebSocket connections
 from pydantic import BaseModel, Field
 from mcp.server.fastmcp import FastMCP
 from typing import Dict, Any, Optional, ClassVar, List
 from dotenv import load_dotenv
+
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s.%(msecs)03d - PID:%(process)d - %(filename)s:%(lineno)d - %(name)s - %(levelname)s - %(message)s',
+    datefmt='%Y-%m-%d %H:%M:%S'
+)
+logger = logging.getLogger(__name__)
 
 load_dotenv()  # Load environment variables from .env file
 
@@ -104,9 +115,9 @@ async def _call_registry_api(method: str, endpoint: str, credentials: Credential
             async with _auth_lock:
                 # Double-check after acquiring the lock in case another coroutine finished auth
                 if _session_cookie is None:
-                    print("No active session cookie. Attempting to authenticate with the registry...")
+                    logger.info("No active session cookie. Attempting to authenticate with the registry...")
                     login_url = f"{REGISTRY_BASE_URL.rstrip('/')}/login"
-                    print(f"login_url: {login_url}") # Debugging line
+                    logger.debug(f"login_url: {login_url}") # Debugging line
                     try:
                         login_response = await client.post(
                             login_url,
@@ -121,7 +132,7 @@ async def _call_registry_api(method: str, endpoint: str, credentials: Credential
                             login_response.raise_for_status()  # Will raise for other error codes
                         
                         # Log status for debugging
-                        print(f"Login response status: {login_response.status_code}")
+                        logger.debug(f"Login response status: {login_response.status_code}")
                         
                         # Extract cookie - check common session cookie names
                         cookie_value = login_response.cookies.get("mcp_gateway_session")
@@ -129,52 +140,52 @@ async def _call_registry_api(method: str, endpoint: str, credentials: Credential
                         # Also check response headers for Set-Cookie if not found in cookies
                         if not cookie_value and 'set-cookie' in login_response.headers:
                             cookie_header = login_response.headers['set-cookie']
-                            print(f"Found Set-Cookie header: {cookie_header}")
+                            logger.debug(f"Found Set-Cookie header: {cookie_header}")
                             # Try to extract session cookie from header
                             if 'mcp_gateway_session=' in cookie_header:
                                 cookie_parts = cookie_header.split('mcp_gateway_session=')[1].split(';')[0]
                                 cookie_value = cookie_parts.strip()
-                                print(f"Extracted cookie from header: {cookie_value}")
+                                logger.debug(f"Extracted cookie from header: {cookie_value}")
 
                         if cookie_value:
                             _session_cookie = cookie_value
-                            print("Authentication successful. Session cookie obtained.")
+                            logger.info("Authentication successful. Session cookie obtained.")
                         else:
                             # Log the response headers and body for debugging if cookie is missing
-                            print(f"DEBUG: Login response headers: {login_response.headers}")
-                            print(f"DEBUG: Login response status: {login_response.status_code}")
+                            logger.debug(f"Login response headers: {login_response.headers}")
+                            logger.debug(f"Login response status: {login_response.status_code}")
                             try:
-                                print(f"DEBUG: Login response body: {login_response.text[:100]}...")  # First 100 chars
+                                logger.debug(f"Login response body: {login_response.text[:100]}...")  # First 100 chars
                             except Exception:
-                                print("Could not read response body")
+                                logger.error("Could not read response body")
                             
                             # If it's a redirect, you might need to handle it manually
                             if login_response.status_code in (301, 302, 303, 307, 308):
                                 redirect_url = login_response.headers.get("Location")
-                                print(f"Got redirect to: {redirect_url}")
+                                logger.debug(f"Got redirect to: {redirect_url}")
                                 
                                 # Optional: Follow the redirect manually to get the cookie
                                 try:
-                                    print(f"Manually following redirect to {redirect_url}")
+                                    logger.debug(f"Manually following redirect to {redirect_url}")
                                     redirect_response = await client.get(
                                         redirect_url,
                                         follow_redirects=False
                                     )
-                                    print(f"Redirect response status: {redirect_response.status_code}")
+                                    logger.debug(f"Redirect response status: {redirect_response.status_code}")
                                     
                                     # Check for cookie in redirect response
                                     cookie_value = redirect_response.cookies.get("mcp_gateway_session")
                                     if cookie_value:
                                         _session_cookie = cookie_value
-                                        print("Authentication successful after redirect. Session cookie obtained.")
+                                        logger.info("Authentication successful after redirect. Session cookie obtained.")
                                     else:
-                                        print(f"DEBUG: Redirect response headers: {redirect_response.headers}")
-                                        print("Still no session cookie after redirect.")
+                                        logger.debug(f"Redirect response headers: {redirect_response.headers}")
+                                        logger.warning("Still no session cookie after redirect.")
                                 except Exception as e:
-                                    print(f"Error following redirect: {e}")
+                                    logger.error(f"Error following redirect: {e}")
                             
                             if _session_cookie is None:
-                                print("Authentication failed: 'mcp_gateway_session' cookie not found in response.")
+                                logger.error("Authentication failed: 'mcp_gateway_session' cookie not found in response.")
                                 raise Exception("Authentication failed: Session cookie not found.")
 
                     except httpx.HTTPStatusError as e:
@@ -185,13 +196,13 @@ async def _call_registry_api(method: str, endpoint: str, credentials: Credential
                              error_detail += f" - Detail: {e.response.json().get('detail', 'N/A')}"
                          except Exception:
                              pass # Ignore if response is not JSON
-                         print(f"Authentication failed: {error_detail}")
+                         logger.error(f"Authentication failed: {error_detail}")
                          raise Exception(f"Authentication failed: {error_detail}") from e
                     except httpx.RequestError as e:
-                         print(f"Authentication failed: Could not connect to registry at {login_url}. Error: {e}")
+                         logger.error(f"Authentication failed: Could not connect to registry at {login_url}. Error: {e}")
                          raise Exception(f"Authentication failed: Request Error {e}") from e
                     except Exception as e: # Catch unexpected errors during login
-                         print(f"An unexpected error occurred during authentication: {e}")
+                         logger.error(f"An unexpected error occurred during authentication: {e}")
                          raise Exception(f"An unexpected error occurred during authentication: {e}") from e
 
         # If still no cookie after attempting auth, something went wrong.
@@ -203,7 +214,7 @@ async def _call_registry_api(method: str, endpoint: str, credentials: Credential
         kwargs['cookies'] = request_cookies # Add/overwrite cookies in kwargs
 
         try:
-            print(f"Calling Registry API: {method} {url}") # Log the actual call
+            logger.info(f"Calling Registry API: {method} {url}") # Log the actual call
             response = await client.request(method, url, **kwargs)
             response.raise_for_status() # Raise HTTPStatusError for bad responses (4xx or 5xx)
 
@@ -215,7 +226,7 @@ async def _call_registry_api(method: str, endpoint: str, credentials: Credential
         except httpx.HTTPStatusError as e:
             # Check if it's an authentication error (e.g., cookie expired/invalid)
             if e.response.status_code in [401, 403]:
-                print(f"API call failed with {e.response.status_code}. Cookie might be invalid or expired. Clearing cookie for re-authentication on next call.")
+                logger.warning(f"API call failed with {e.response.status_code}. Cookie might be invalid or expired. Clearing cookie for re-authentication on next call.")
                 # Clear the cookie so the next call re-authenticates
                 async with _auth_lock:
                     _session_cookie = None
@@ -399,6 +410,47 @@ async def get_server_details(
     endpoint = f"/api/server_details/{service_path.lstrip('/')}"
     credentials = Credentials(username=username, password=password)
     return await _call_registry_api("GET", endpoint, credentials=credentials)
+
+
+@mcp.tool()
+async def healthcheck() -> Dict[str, Any]:
+    """
+    Retrieves health status information from all registered MCP servers via the registry's WebSocket endpoint.
+    
+    Returns:
+        Dict[str, Any]: Health status information for all registered servers, including:
+            - status: 'healthy' or 'disabled'
+            - last_checked_iso: ISO timestamp of when the server was last checked
+            - num_tools: Number of tools provided by the server
+            
+    Raises:
+        Exception: If the WebSocket connection fails or the data cannot be retrieved.
+    """
+    try:
+        # Connect to the WebSocket endpoint
+        registry_ws_url = f"ws://localhost:7860/ws/health_status"
+        logger.info(f"Connecting to WebSocket endpoint: {registry_ws_url}")
+        
+        async with websockets.connect(registry_ws_url) as websocket:
+            # WebSocket connection established, wait for the health status data
+            logger.info("WebSocket connection established, waiting for health status data...")
+            response = await websocket.recv()
+            
+            # Parse the JSON response
+            health_data = json.loads(response)
+            logger.info(f"Received health status data for {len(health_data)} servers")
+            
+            return health_data
+            
+    except websockets.exceptions.WebSocketException as e:
+        logger.error(f"WebSocket error: {e}")
+        raise Exception(f"Failed to connect to health status WebSocket: {e}")
+    except json.JSONDecodeError as e:
+        logger.error(f"JSON decode error: {e}")
+        raise Exception(f"Failed to parse health status data: {e}")
+    except Exception as e:
+        logger.error(f"Unexpected error retrieving health status: {e}")
+        raise Exception(f"Unexpected error retrieving health status: {e}")
 
 
 # --- Main Execution ---

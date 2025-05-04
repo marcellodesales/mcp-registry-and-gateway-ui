@@ -6,11 +6,20 @@ import os
 import time
 import requests
 import argparse
+import logging
 from pydantic import BaseModel, Field
 from mcp.server.fastmcp import FastMCP
 from typing import Dict, Any, Optional, ClassVar
 from pydantic import validator
 from dotenv import load_dotenv
+
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s.%(msecs)03d - PID:%(process)d - %(filename)s:%(lineno)d - %(name)s - %(levelname)s - %(message)s',
+    datefmt='%Y-%m-%d %H:%M:%S'
+)
+logger = logging.getLogger(__name__)
 
 load_dotenv()  # Load environment variables from .env file
 API_KEY = os.environ.get("POLYGON_API_KEY")
@@ -149,10 +158,10 @@ def get_stock_aggregates(params: StockAggregateParams) -> Dict[str, Any]:
             if retry_count == Constants.MAX_RETRIES:
                 raise
 
-            print(
+            logger.warning(
                 f"Request failed (attempt {retry_count}/{Constants.MAX_RETRIES}): {str(e)}"
             )
-            print(f"Retrying in {Constants.RETRY_DELAY} seconds...")
+            logger.info(f"Retrying in {Constants.RETRY_DELAY} seconds...")
 
             # Wait before retrying
             time.sleep(Constants.RETRY_DELAY)

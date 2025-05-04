@@ -87,6 +87,12 @@ LOG_FILE_PATH = CONTAINER_LOG_DIR / "registry.log"
 # --- REMOVE Logging Setup from here --- END
 
 # --- Define logger at module level (unconfigured initially) --- START
+# Configure logging with process ID, filename, line number, and millisecond precision
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s.%(msecs)03d - PID:%(process)d - %(filename)s:%(lineno)d - %(name)s - %(levelname)s - %(message)s',
+    datefmt='%Y-%m-%d %H:%M:%S'
+)
 logger = logging.getLogger(__name__)
 # --- Define logger at module level (unconfigured initially) --- END
 
@@ -321,7 +327,10 @@ def load_registered_servers_and_state():
     SERVERS_DIR.mkdir(parents=True, exist_ok=True) # Added parents=True
 
     temp_servers = {}
-    server_files = list(SERVERS_DIR.glob("*.json"))
+    server_files = list(SERVERS_DIR.glob("**/*.json"))
+    logger.info(f"Found {len(server_files)} JSON files in {SERVERS_DIR} and its subdirectories")
+    for file in server_files:
+        logger.info(f"[DEBUG] - {file.relative_to(SERVERS_DIR)}")
 
     if not server_files:
         logger.warning(f"No server definition files found in {SERVERS_DIR}. Initializing empty registry.")
