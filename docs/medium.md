@@ -1,6 +1,6 @@
 ## Taming the Chaos: How the MCP Gateway Centralizes Your AI Model's Tools
 
-<a href="img/mcp-gateway-header.svg" target="_blank">mcp-gateway-header.svg</a> 
+![MCP Gateway - From Chaos to Order](img/mcp-gateway-header.svg)
 
 ---
 
