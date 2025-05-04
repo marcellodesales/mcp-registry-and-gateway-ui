@@ -126,7 +126,7 @@ flowchart TB
 ```
 
 
-**(Caption:** High-level architecture of the MCP Gateway & Registry, routing requests from AI Agents to backend MCP Servers.)
+**(Figure:** High-level architecture of the MCP Gateway & Registry, routing requests from AI Agents to backend MCP Servers.)
 
 At its core, the Gateway uses **Nginx** as a powerful reverse proxy. A **FastAPI** application acts as the **Registry**, managing server information and providing a **Web UI**. This architecture separates concerns effectively, allowing each component to focus on what it does best.
 
