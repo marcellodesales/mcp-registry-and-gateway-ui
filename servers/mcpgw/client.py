@@ -185,7 +185,7 @@ if __name__ == "__main__":
 
     # Construct URL based on whether server_name is provided (it defaults to mcpgw now)
     # The server itself doesn't expect the server name in the path for /sse
-    server_url = f"http{secure}://{args.host}:{args.port}/sse"
+    server_url = f"http{secure}://{args.host}:{args.port}/{args.server_name}/sse"
 
     # Run the async main function
     import asyncio
