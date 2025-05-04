@@ -241,7 +241,7 @@ The Gateway and the Registry are available as a Docker container. The package in
 1.  **View Tools:** Click the tool count icon (🔧) in the card footer to open a modal displaying discovered tools and their schemas for healthy services.
 1.  **Filter:** Use the sidebar links to filter the displayed services.
 
-### Interact with the MCP Registry via its own builti-in MCP server!
+### Interact with the MCP Registry via its own built-in MCP server!
 
 The MCP Registry provides an [API](#api-endpoints-brief-overview), this API is also exposed as an MCP server so we have an MCP Server to manage the MCP Registry itself. You can use any MCP Host such as [`Cursor`](https://www.cursor.com/) or others that support remove MCP Servers over SSE. To add the MCP Registry's MCP server to Cursor, simply add the following JSON to Cursor's `mcp.json` file.
 
