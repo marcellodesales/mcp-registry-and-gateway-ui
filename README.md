@@ -269,7 +269,7 @@ The Gateway and the Registry are available as a Docker container. The package in
 
 ## API Endpoints (Brief Overview)
 
-See the full API spec [here](./registry_api.md).
+See the full API spec [here](docs/registry_api.md).
 
 *   `POST /register`: Register a new service (form data).
 *   `POST /toggle/{service_path}`: Enable/disable a service (form data).
