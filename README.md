@@ -197,7 +197,7 @@ The Gateway and the Registry are available as a Docker container. The package in
 
 1. **Navigate to [`http://localhost:7860`](http://localhost:7860) access the Registry**
 
-    ![MCP Registry](./img/registry.png)
+    ![MCP Registry](docs/img/registry.png)
 
 ### Running the Gateway over HTTPS
 

@@ -36,46 +36,11 @@ This is exactly what the **MCP Gateway & Registry** provides. It transforms your
 
 ---
 
-### Clear Proof: Architecture & Features of the MCP Gateway
+### Architecture & Features of the MCP Gateway
 
 The MCP Gateway isn't just an idea; it's a robust application built on proven technologies designed for enterprise-grade reliability and performance.
 
 **Architecture:**
-
-At its core, the Gateway uses **Nginx** as a powerful reverse proxy. A **FastAPI** application acts as the **Registry**, managing server information and providing a **Web UI**. This architecture separates concerns effectively, allowing each component to focus on what it does best.
-
-*   **Nginx Reverse Proxy:** Intelligently routes incoming MCP requests (based on the URL path like `/weather` or `/fininfo`) to the correct backend MCP server, wherever it might be running (locally, EKS, Lambda, etc.). This provides:
-    *   High-performance request routing with minimal latency
-    *   Ability to handle thousands of concurrent connections
-    *   Built-in load balancing capabilities for high availability
-    *   Support for both HTTP and HTTPS traffic with proper SSL termination
-
-*   **FastAPI Registry:**
-    *   Stores details of all registered MCP servers (name, description, URL, tags, etc.) in a structured format
-    *   Provides comprehensive REST APIs for registration, management, and querying server details/tools
-    *   Implements proper authentication and session management for secure access
-    *   Serves the Web UI with real-time updates via WebSockets
-    *   Handles dynamic Nginx configuration generation based on server state changes
-
-*   **Health Checks:** Periodically checks the `/sse` endpoint of registered and enabled servers to ensure they are responsive. The system:
-    *   Runs background tasks that verify server availability at configurable intervals
-    *   Updates server status in real-time when changes are detected
-    *   Provides detailed error information when servers become unhealthy
-    *   Allows manual triggering of health checks for immediate verification
-
-*   **Tool Discovery:** Connects to healthy servers using the MCP client library to fetch and display their available tools, including:
-    *   Tool names, descriptions, and parameter schemas
-    *   Automatic parsing and formatting of tool documentation
-    *   Categorization based on server tags and tool functionality
-    *   Searchable interface for finding specific capabilities
-
-*   **WebSockets:** Pushes real-time status updates (health, tool counts) to the Web UI, enabling:
-    *   Immediate visibility of server status changes without page refreshes
-    *   Live monitoring of the entire MCP ecosystem from a single dashboard
-    *   Efficient updates that minimize network traffic and browser resource usage
-
-**(Diagram: Include the Mermaid diagram from the README here - Render as image for Medium)**
-
 ```mermaid
 flowchart TB
     subgraph AI_Agents["AI Agents"]
@@ -163,6 +128,38 @@ flowchart TB
 
 **(Caption:** High-level architecture of the MCP Gateway & Registry, routing requests from AI Agents to backend MCP Servers.)
 
+At its core, the Gateway uses **Nginx** as a powerful reverse proxy. A **FastAPI** application acts as the **Registry**, managing server information and providing a **Web UI**. This architecture separates concerns effectively, allowing each component to focus on what it does best.
+
+*   **Nginx Reverse Proxy:** Intelligently routes incoming MCP requests (based on the URL path like `/weather` or `/fininfo`) to the correct backend MCP server, wherever it might be running (locally, EKS, Lambda, etc.). This provides:
+    *   High-performance request routing with minimal latency
+    *   Ability to handle thousands of concurrent connections
+    *   Built-in load balancing capabilities for high availability
+    *   Support for both HTTP and HTTPS traffic with proper SSL termination
+
+*   **FastAPI Registry:**
+    *   Stores details of all registered MCP servers (name, description, URL, tags, etc.) in a structured format
+    *   Provides comprehensive REST APIs for registration, management, and querying server details/tools
+    *   Implements proper authentication and session management for secure access
+    *   Serves the Web UI with real-time updates via WebSockets
+    *   Handles dynamic Nginx configuration generation based on server state changes
+
+*   **Health Checks:** Periodically checks the `/sse` endpoint of registered and enabled servers to ensure they are responsive. The system:
+    *   Runs background tasks that verify server availability at configurable intervals
+    *   Updates server status in real-time when changes are detected
+    *   Provides detailed error information when servers become unhealthy
+    *   Allows manual triggering of health checks for immediate verification
+
+*   **Tool Discovery:** Connects to healthy servers using the MCP client library to fetch and display their available tools, including:
+    *   Tool names, descriptions, and parameter schemas
+    *   Automatic parsing and formatting of tool documentation
+    *   Categorization based on server tags and tool functionality
+    *   Searchable interface for finding specific capabilities
+
+*   **WebSockets:** Pushes real-time status updates (health, tool counts) to the Web UI, enabling:
+    *   Immediate visibility of server status changes without page refreshes
+    *   Live monitoring of the entire MCP ecosystem from a single dashboard
+    *   Efficient updates that minimize network traffic and browser resource usage
+
 **Key Features:**
 
 *   **Centralized Proxy:** Single entry point for all MCP traffic, simplifying network architecture and security management.
@@ -221,8 +218,9 @@ Setting up and using the MCP Gateway is straightforward, designed for both quick
 
 2.  **Access the UI:** Navigate to the Gateway's host (e.g., `http://localhost:7860`) and log in with your configured credentials.
 
+    ![MCP Registry](img/registry.png)
+
 3.  **Register Your Services:** Use the UI or the `/register` API endpoint to add your existing MCP servers, providing their name, path prefix (e.g., `/weather`), and internal URL (e.g., `http://weather-service:8000`).
-    *   **[Image Placeholder: Screenshot of the 'Register Service' form or API call example.]**
     
     Alternatively, use the `mcpgw` MCP server to register services programmatically:
     ```python
@@ -276,11 +274,10 @@ Our goal is to establish the MCP Gateway & Registry as the de facto standard for
 
 Ready to move beyond the chaos of scattered MCP servers and embrace a more organized, manageable approach to AI tool integration?
 
-*   **Check out the code:** [Link to your GitHub Repository]
-*   **Try it out:** Follow the installation steps in the README to deploy your own Gateway in minutes.
-*   **Contribute:** We welcome feedback, feature requests, and code contributions from the community!
+*   **Check out the code:** [MCP Gateway repo on GitHub](https://github.com/aarora79/mcp-gateway/tree/main)
+*   **Try it out:** Follow the installation steps in the [README](https://github.com/aarora79/mcp-gateway/tree/main?tab=readme-ov-file#installation) to deploy your own Gateway in minutes.
+*   **Contribute:** We welcome feedback, feature requests, and code contributions from the community! Create a GitHub issue, see [guidelines for contributing](https://github.com/aarora79/mcp-gateway/blob/main/startCONTRIBUTING.md).
 *   **Connect:** Join our community of AI practitioners who are building the future of AI tool integration.
 
 Stop wrestling with complexity and start leveraging the power of a unified MCP landscape with the MCP Gateway & Registry. Your AI infrastructure deserves this level of organization and control.
 
-**(Optional: Call to action buttons/links if Medium allows)**
