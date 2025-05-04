@@ -165,11 +165,11 @@ At its core, the Gateway uses **Nginx** as a powerful reverse proxy. A **FastAPI
 *   **Centralized Proxy:** Single entry point for all MCP traffic, simplifying network architecture and security management.
 *   **Service Registry & Discovery:** Find and understand available services through a comprehensive catalog with detailed metadata.
 *   **Web UI Management:** Easy-to-use interface for operators with intuitive controls for common management tasks.
-    *   **[Image Placeholder: Screenshot of the MCP Gateway Dashboard showing registered services, health status, and toggle switches.]**
+    *   ![MCP Registry](img/registry.png)
 *   **Real-time Health Monitoring:** Know the status of your services instantly via WebSocket updates, with detailed diagnostics for troubleshooting.
 *   **Dynamic Nginx Configuration:** Automatically updates routing rules as services are enabled/disabled, eliminating manual configuration errors.
 *   **Automatic Tool Listing:** Fetches and displays tools from healthy services, providing a complete inventory of available capabilities.
-    *   **[Image Placeholder: Screenshot of the tool listing modal for a specific service.]**
+    *   ![MCP Registry](img/MCP_tools.gif)
 *   **Secure Access:** Authentication for UI and management APIs, with session management and proper security controls.
 *   **Flexible Deployment:** Runs in Docker, integrates with various backend hosting options including EC2, EKS, Lambda, and more.
 *   **Filtering & Statistics:** Filter services by status (All, Enabled, Disabled, Issues) and view usage statistics for better resource management.
@@ -216,9 +216,7 @@ Setting up and using the MCP Gateway is straightforward, designed for both quick
       --name mcp-gateway-container mcp-gateway
     ```
 
-2.  **Access the UI:** Navigate to the Gateway's host (e.g., `http://localhost:7860`) and log in with your configured credentials.
-
-    ![MCP Registry](img/registry.png)
+2.  **Access the UI:** Navigate to the Gateway's host (e.g., `http://localhost:7860`) and log in with your configured credentials.    
 
 3.  **Register Your Services:** Use the UI or the `/register` API endpoint to add your existing MCP servers, providing their name, path prefix (e.g., `/weather`), and internal URL (e.g., `http://weather-service:8000`).
     
@@ -244,27 +242,14 @@ Setting up and using the MCP Gateway is straightforward, designed for both quick
 
 ---
 
-### Our Promise to You: Simplicity, Scalability, and Control
+### Roadmap
 
-The MCP Gateway & Registry isn't just another piece of infrastructure; it's a strategic investment in your AI development workflow and operational efficiency.
+The MCP Gateway & Registry isn't just another piece of infrastructure; it's a strategic investment in your AI development workflow and operational efficiency. This project is actively developed, with a clear roadmap that includes:
 
-For CTOs and technical leaders:
-*   **Governance and Visibility:** Gain a complete view of your organization's AI capabilities and how they're being utilized.
-*   **Risk Reduction:** Centralize authentication, access control, and monitoring to enhance security posture.
-*   **Resource Optimization:** Understand usage patterns and allocate resources more effectively based on actual demand.
-*   **Future-Proofing:** Create an architecture that can scale with your AI ambitions without requiring constant redesign.
-
-For developers and engineers:
-*   **Reduced Complexity:** Abstract away the underlying locations and implementation details of MCP servers.
-*   **Improved Discoverability:** Quickly find the tools you need through a searchable, categorized interface.
-*   **Enhanced Productivity:** Spend less time configuring and debugging connections, and more time building intelligent applications.
-*   **Consistent Experience:** Work with a standardized interface regardless of where the underlying tools are deployed.
-
-This project is actively developed, with a clear roadmap that includes:
-1. Persistent storage for server information
-2. OAUTH 2.1 support for enhanced security
-3. GitHub API integration for retrieving server metadata
-4. Deployment automation for MCP servers
+1. OAUTH 2.1 support for enhanced security
+1. Intelligent tool finder tool
+1. Deployment automation for MCP servers
+1. GitHub API integration for retrieving server metadata from MCP server repos
 
 Our goal is to establish the MCP Gateway & Registry as the de facto standard for managing enterprise MCP deployments, providing a foundation that grows with your AI capabilities.
 
