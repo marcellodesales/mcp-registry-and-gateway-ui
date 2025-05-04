@@ -1038,12 +1038,26 @@ async def register_service(
     license_str: Annotated[str, Form(alias="license")] = "N/A",
     username: Annotated[str, Depends(api_auth)] = None,
 ):
+    print(f"[DEBUG] register_service() called with parameters:")
+    print(f"[DEBUG] - name: {name}")
+    print(f"[DEBUG] - description: {description}")
+    print(f"[DEBUG] - path: {path}")
+    print(f"[DEBUG] - proxy_pass_url: {proxy_pass_url}")
+    print(f"[DEBUG] - tags: {tags}")
+    print(f"[DEBUG] - num_tools: {num_tools}")
+    print(f"[DEBUG] - num_stars: {num_stars}")
+    print(f"[DEBUG] - is_python: {is_python}")
+    print(f"[DEBUG] - license_str: {license_str}")
+    print(f"[DEBUG] - username: {username}")
+
     # Ensure path starts with a slash
     if not path.startswith("/"):
         path = "/" + path
+        print(f"[DEBUG] Path adjusted to start with slash: {path}")
 
     # Check if path already exists
     if path in REGISTERED_SERVERS:
+        print(f"[ERROR] Service registration failed: path '{path}' already exists")
         return JSONResponse(
             status_code=400,
             content={"error": f"Service with path '{path}' already exists"},
@@ -1051,6 +1065,7 @@ async def register_service(
 
     # Process tags: split string, strip whitespace, filter empty
     tag_list = [tag.strip() for tag in tags.split(",") if tag.strip()]
+    print(f"[DEBUG] Processed tags: {tag_list}")
 
     # Create new server entry with all fields
     server_entry = {
@@ -1065,61 +1080,79 @@ async def register_service(
         "license": license_str,
         "tool_list": [] # Initialize tool list
     }
+    print(f"[DEBUG] Created server entry: {json.dumps(server_entry, indent=2)}")
 
     # Save to individual file
+    print(f"[DEBUG] Attempting to save server data to file...")
     success = save_server_to_file(server_entry)
     if not success:
+        print(f"[ERROR] Failed to save server data to file")
         return JSONResponse(
             status_code=500, content={"error": "Failed to save server data"}
         )
+    print(f"[DEBUG] Successfully saved server data to file")
 
     # Add to in-memory registry and default to disabled
+    print(f"[DEBUG] Adding server to in-memory registry...")
     REGISTERED_SERVERS[path] = server_entry
+    print(f"[DEBUG] Setting initial service state to disabled")
     MOCK_SERVICE_STATE[path] = False
     # Set initial health status for the new service (always start disabled)
+    print(f"[DEBUG] Setting initial health status to 'disabled'")
     SERVER_HEALTH_STATUS[path] = "disabled" # Start disabled
     SERVER_LAST_CHECK_TIME[path] = None # No check time yet
     # Ensure num_tools is present in the in-memory dict immediately
     if "num_tools" not in REGISTERED_SERVERS[path]:
+        print(f"[DEBUG] Adding missing num_tools field to in-memory registry")
         REGISTERED_SERVERS[path]["num_tools"] = 0
 
     # Regenerate Nginx config after successful registration
+    print(f"[DEBUG] Attempting to regenerate Nginx configuration...")
     if not regenerate_nginx_config():
-        print("ERROR: Failed to update Nginx configuration after registration.")
+        print(f"[ERROR] Failed to update Nginx configuration after registration")
+    else:
+        print(f"[DEBUG] Successfully regenerated Nginx configuration")
 
-    print(f"New service registered: '{name}' at path '{path}' by user '{username}'")
+    print(f"[INFO] New service registered: '{name}' at path '{path}' by user '{username}'")
 
     # --- Persist the updated state after registration --- START
     try:
+        print(f"[DEBUG] Attempting to persist state to {STATE_FILE_PATH}...")
         with open(STATE_FILE_PATH, "w") as f:
             json.dump(MOCK_SERVICE_STATE, f, indent=2)
-        print(f"Persisted state to {STATE_FILE_PATH} after registration")
+        print(f"[DEBUG] Successfully persisted state to {STATE_FILE_PATH}")
     except Exception as e:
-        print(f"ERROR: Failed to persist state to {STATE_FILE_PATH} after registration: {e}")
+        print(f"[ERROR] Failed to persist state to {STATE_FILE_PATH}: {str(e)}")
     # --- Persist the updated state after registration --- END
 
     # Broadcast the updated status after registration
+    print(f"[DEBUG] Creating task to broadcast health status...")
     asyncio.create_task(broadcast_health_status())
 
+    print(f"[DEBUG] Registration complete, returning success response")
     return JSONResponse(
         status_code=201,
         content={
             "message": "Service registered successfully",
             "service": server_entry,
-            # Optional: Add a warning if config generation failed
-            # "warning": "Nginx configuration update failed, please check logs."
         },
     )
-
 
 @app.get("/api/server_details/{service_path:path}")
 async def get_server_details(
     service_path: str,
     username: Annotated[str, Depends(api_auth)]
 ):
+    # Normalize the path to ensure it starts with '/'
     if not service_path.startswith('/'):
         service_path = '/' + service_path
     
+    # Special case: if path is 'all' or '/all', return details for all servers
+    if service_path == '/all':
+        # Return a dictionary of all registered servers
+        return REGISTERED_SERVERS
+    
+    # Regular case: return details for a specific server
     server_info = REGISTERED_SERVERS.get(service_path)
     if not server_info:
         raise HTTPException(status_code=404, detail="Service path not registered")
@@ -1137,6 +1170,34 @@ async def get_service_tools(
     if not service_path.startswith('/'):
         service_path = '/' + service_path
 
+    # Handle special case for '/all' to return tools from all servers
+    if service_path == '/all':
+        all_tools = []
+        all_servers_tools = {}
+        
+        for path, server_info in REGISTERED_SERVERS.items():
+            tool_list = server_info.get("tool_list")
+            
+            if tool_list is not None and isinstance(tool_list, list):
+                # Add server information to each tool
+                server_tools = []
+                for tool in tool_list:
+                    # Create a copy of the tool with server info added
+                    tool_with_server = dict(tool)
+                    tool_with_server["server_path"] = path
+                    tool_with_server["server_name"] = server_info.get("server_name", "Unknown")
+                    server_tools.append(tool_with_server)
+                
+                all_tools.extend(server_tools)
+                all_servers_tools[path] = server_tools
+        
+        return {
+            "service_path": "all",
+            "tools": all_tools,
+            "servers": all_servers_tools
+        }
+    
+    # Handle specific server case (existing logic)
     server_info = REGISTERED_SERVERS.get(service_path)
     if not server_info:
         raise HTTPException(status_code=404, detail="Service path not registered")

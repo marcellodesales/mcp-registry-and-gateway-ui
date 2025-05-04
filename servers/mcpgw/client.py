@@ -2,7 +2,7 @@
 Example MCP client for the mcpgw server.
 
 This client connects to the mcpgw MCP server, lists its capabilities,
-and demonstrates calling the 'get_server_details' tool.
+and demonstrates calling the 'get_server_details' and 'register_service' tools.
 
 Usage:
   python client.py [--host HOSTNAME] [--port PORT] [--server-name SERVER_NAME]
@@ -55,14 +55,17 @@ async def run(server_url, args):
 
             # --- Example: Call the get_server_details tool ---
             # Let's try to get details for the '/current_time' server (assuming it's registered)
-            target_service_path = "/currenttime"
+            target_service_path = "/all"
             print(f"\nCalling 'get_server_details' tool for service_path='{target_service_path}'")
 
             try:
-                # The 'get_server_details' tool expects parameters nested under 'params'
-                tool_params = {"service_path": target_service_path, "username": args.username, "password": args.password}
+                # Pass parameters directly to the get_server_details tool
                 result = await session.call_tool(
-                    "get_server_details", arguments={"params": tool_params}
+                    "get_server_details", arguments={
+                        "service_path": target_service_path,
+                        "username": args.username,
+                        "password": args.password
+                    }
                 )
 
                 # Display the results (which should be the JSON response from the registry)
@@ -82,6 +85,46 @@ async def run(server_url, args):
 
             except Exception as e:
                 print(f"Error calling 'get_server_details': {e}")
+            # --- End Example ---
+
+            # --- Example: Call the register_service tool ---
+            print("\nCalling 'register_service' tool with hardcoded parameters")
+
+            try:
+                # Pass hardcoded parameters to the register_service tool
+                result = await session.call_tool(
+                    "register_service", arguments={
+                        "server_name": "Example Service",
+                        "path": "/example-service",
+                        "proxy_pass_url": "http://localhost:9000",
+                        "description": "An example MCP service for demonstration purposes",
+                        "tags": ["example", "demo", "test"],
+                        "num_tools": 3,
+                        "num_stars": 5,
+                        "is_python": True,
+                        "license": "MIT",
+                        "username": args.username,
+                        "password": args.password
+                    }
+                )
+
+                # Display the results
+                print("=" * 50)
+                print("Result for register_service:")
+                print("=" * 50)
+                # The result content is usually a list of MessagePart objects
+                full_response_text = "".join(part.text for part in result.content if hasattr(part, 'text'))
+                try:
+                    # Attempt to parse and pretty-print if it's JSON
+                    parsed_json = json.loads(full_response_text)
+                    print(json.dumps(parsed_json, indent=2))
+                except json.JSONDecodeError:
+                    # Otherwise, just print the raw text
+                    print(full_response_text)
+                print("=" * 50)
+
+            except Exception as e:
+                print(f"Error calling 'register_service': {e}")
             # --- End Example ---
 
 

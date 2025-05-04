@@ -74,24 +74,8 @@ class Credentials(BaseModel):
     password: str = Field(..., description="Password for registry authentication")
 
 
-class ServicePathParams(BaseModel):
-    """Parameters for service path operations."""
-    service_path: str = Field(..., description="The unique path identifier for the service (e.g., '/fininfo'). Must start with '/'.")
-    username: str = Field(..., description="Username for registry authentication")
-    password: str = Field(..., description="Password for registry authentication")
-
-
-class RegisterServiceParams(BaseModel):
-    """Parameters for registering a new service."""
-    server_name: str = Field(..., description="Display name for the server.")
-    path: str = Field(..., description="Unique URL path prefix for the server (e.g., '/my-service'). Must start with '/'.")
-    proxy_pass_url: str = Field(..., description="The internal URL where the actual MCP server is running (e.g., 'http://localhost:8001').")
-    description: Optional[str] = Field(None, description="Optional description of the server.")
-    tags: Optional[List[str]] = Field(None, description="Optional list of tags for categorization.")
-    is_python: Optional[bool] = Field(False, description="Whether the server is implemented in Python.")
-    license: Optional[str] = Field("N/A", description="License information for the server.")
-    username: str = Field(..., description="Username for registry authentication")
-    password: str = Field(..., description="Password for registry authentication")
+# Pydantic classes for ServicePathParams and RegisterServiceParams have been removed
+# as they are no longer needed. The parameters are now directly defined in the functions.
 
 
 # --- Helper function for making requests to the registry (with authentication) ---
@@ -255,12 +239,18 @@ async def _call_registry_api(method: str, endpoint: str, credentials: Credential
 # --- MCP Tools ---
 
 @mcp.tool()
-async def toggle_service(params: ServicePathParams) -> Dict[str, Any]:
+async def toggle_service(
+    service_path: str = Field(..., description="The unique path identifier for the service (e.g., '/fininfo'). Must start with '/'."),
+    username: str = Field(..., description="Username for registry authentication"),
+    password: str = Field(..., description="Password for registry authentication")
+) -> Dict[str, Any]:
     """
     Toggles the enabled/disabled state of a registered MCP server in the gateway.
 
     Args:
-        params: ServicePathParams containing the service_path and credentials.
+        service_path: The unique path identifier for the service (e.g., '/fininfo'). Must start with '/'.
+        username: Username for registry authentication.
+        password: Password for registry authentication.
 
     Returns:
         Dict[str, Any]: Response from the registry API indicating success or failure.
@@ -268,58 +258,137 @@ async def toggle_service(params: ServicePathParams) -> Dict[str, Any]:
     Raises:
         Exception: If the API call fails.
     """
-    endpoint = f"/toggle/{params.service_path.lstrip('/')}" # Ensure path doesn't have double slash
-    credentials = Credentials(username=params.username, password=params.password)
+    endpoint = f"/toggle/{service_path.lstrip('/')}" # Ensure path doesn't have double slash
+    credentials = Credentials(username=username, password=password)
     return await _call_registry_api("POST", endpoint, credentials=credentials)
 
+# This implementation has been replaced by the one below
+# @mcp.tool()
+# async def register_service(
+#     server_name: str = Field(..., description="Display name for the server."),
+#     path: str = Field(..., description="Unique URL path prefix for the server (e.g., '/my-service'). Must start with '/'."),
+#     proxy_pass_url: str = Field(..., description="The internal URL where the actual MCP server is running (e.g., 'http://localhost:8001')."),
+#     description: Optional[str] = Field(None, description="Optional description of the server."),
+#     tags: Optional[List[str]] = Field(None, description="Optional list of tags for categorization."),
+#     is_python: Optional[bool] = Field(False, description="Whether the server is implemented in Python."),
+#     license: Optional[str] = Field("N/A", description="License information for the server."),
+#     username: str = Field(..., description="Username for registry authentication"),
+#     password: str = Field(..., description="Password for registry authentication")
+# ) -> Dict[str, Any]:
+#     """
+#     Registers a new MCP server with the gateway.
+#
+#     Args:
+#         server_name: Display name for the server.
+#         path: Unique URL path prefix for the server (e.g., '/my-service'). Must start with '/'.
+#         proxy_pass_url: The internal URL where the actual MCP server is running (e.g., 'http://localhost:8001').
+#         description: Optional description of the server.
+#         tags: Optional list of tags for categorization.
+#         is_python: Whether the server is implemented in Python (default: False).
+#         license: License information for the server (default: 'N/A').
+#         username: Username for registry authentication.
+#         password: Password for registry authentication.
+#
+#     Returns:
+#         Dict[str, Any]: Response from the registry API, likely including the registered server details.
+#
+#     Raises:
+#         Exception: If the API call fails.
+#     """
+#     endpoint = "/register"
+#     # Extract username and password for credentials
+#     credentials = Credentials(username=username, password=password)
+#
+#     # Create data to send to the API (excluding username and password)
+#     data_to_send = {
+#         "server_name": server_name,
+#         "path": path,
+#         "proxy_pass_url": proxy_pass_url,
+#         "description": description,
+#         "tags": tags,
+#         "is_python": is_python,
+#         "license": license
+#     }
+#     # Remove None values
+#     data_to_send = {k: v for k, v in data_to_send.items() if v is not None}
+#
+#     return await _call_registry_api("POST", endpoint, credentials=credentials, json=data_to_send)
+
 @mcp.tool()
-async def register_service(params: RegisterServiceParams) -> Dict[str, Any]:
+async def register_service(
+    server_name: str = Field(..., description="Display name for the server."),
+    path: str = Field(..., description="Unique URL path prefix for the server (e.g., '/my-service'). Must start with '/'."),
+    proxy_pass_url: str = Field(..., description="The internal URL where the actual MCP server is running (e.g., 'http://localhost:8001')."),
+    description: Optional[str] = Field("", description="Description of the server."),
+    tags: Optional[List[str]] = Field(None, description="Optional list of tags for categorization."),
+    num_tools: Optional[int] = Field(0, description="Number of tools provided by the server."),
+    num_stars: Optional[int] = Field(0, description="Number of stars/rating for the server."),
+    is_python: Optional[bool] = Field(False, description="Whether the server is implemented in Python."),
+    license: Optional[str] = Field("N/A", description="License information for the server."),
+    username: str = Field(..., description="Username for registry authentication"),
+    password: str = Field(..., description="Password for registry authentication")
+) -> Dict[str, Any]:
     """
     Registers a new MCP server with the gateway.
-
+    
     Args:
-        params: RegisterServiceParams containing the details of the server to register.
-
+        server_name: Display name for the server.
+        path: Unique URL path prefix for the server (e.g., '/my-service'). Must start with '/'.
+        proxy_pass_url: The internal URL where the actual MCP server is running (e.g., 'http://localhost:8001').
+        description: Description of the server.
+        tags: Optional list of tags for categorization.
+        num_tools: Number of tools provided by the server.
+        num_stars: Number of stars/rating for the server.
+        is_python: Whether the server is implemented in Python.
+        license: License information for the server.
+        username: Username for registry authentication.
+        password: Password for registry authentication.
+        
     Returns:
         Dict[str, Any]: Response from the registry API, likely including the registered server details.
-
+        
     Raises:
         Exception: If the API call fails.
     """
     endpoint = "/register"
     # Extract username and password for credentials
-    credentials = Credentials(username=params.username, password=params.password)
+    credentials = Credentials(username=username, password=password)
     
-    # Remove username and password from data to send to the API
-    data_to_send = params.model_dump(exclude={"username", "password"}, exclude_unset=True)
+    # Convert tags list to comma-separated string if it's a list
+    tags_str = ",".join(tags) if isinstance(tags, list) and tags is not None else tags
     
-    return await _call_registry_api("POST", endpoint, credentials=credentials, json=data_to_send)
+    # Create form data to send to the API
+    form_data = {
+        "name": server_name,  # Use 'name' as expected by the registry API
+        "path": path,
+        "proxy_pass_url": proxy_pass_url,
+        "description": description if description is not None else "",
+        "tags": tags_str if tags_str is not None else "",
+        "num_tools": num_tools,
+        "num_stars": num_stars,
+        "is_python": is_python,
+        "license": license  # The registry API uses alias="license" for license_str
+    }
+    # Remove None values
+    form_data = {k: v for k, v in form_data.items() if v is not None}
+    
+    # Send as form data instead of JSON
+    return await _call_registry_api("POST", endpoint, credentials=credentials, data=form_data)
 
 @mcp.tool()
-async def get_server_details(params: ServicePathParams) -> Dict[str, Any]:
-    """
-    Retrieves the configuration details for a specific registered MCP server.
-
-    Args:
-        params: ServicePathParams containing the service_path and credentials.
-
-    Returns:
-        Dict[str, Any]: Detailed information about the specified server.
-
-    Raises:
-        Exception: If the API call fails or the server is not found.
-    """
-    endpoint = f"/api/server_details/{params.service_path.lstrip('/')}"
-    credentials = Credentials(username=params.username, password=params.password)
-    return await _call_registry_api("GET", endpoint, credentials=credentials)
-
-@mcp.tool()
-async def get_service_tools(params: ServicePathParams) -> Dict[str, Any]:
+async def get_service_tools(
+    service_path: str = Field(..., description="The unique path identifier for the service (e.g., '/fininfo'). Must start with '/'. Use '/all' to get tools from all registered servers."),
+    username: str = Field(..., description="Username for registry authentication"),
+    password: str = Field(..., description="Password for registry authentication")
+) -> Dict[str, Any]:
     """
     Lists the tools provided by a specific registered MCP server.
 
     Args:
-        params: ServicePathParams containing the service_path and credentials.
+        service_path: The unique path identifier for the service (e.g., '/fininfo'). Must start with '/'.
+                      Use '/all' to get tools from all registered servers.
+        username: Username for registry authentication.
+        password: Password for registry authentication.
 
     Returns:
         Dict[str, Any]: A list of tools exposed by the specified server.
@@ -327,18 +396,24 @@ async def get_service_tools(params: ServicePathParams) -> Dict[str, Any]:
     Raises:
         Exception: If the API call fails or the server cannot be reached.
     """
-    endpoint = f"/api/tools/{params.service_path.lstrip('/')}"
-    credentials = Credentials(username=params.username, password=params.password)
+    endpoint = f"/api/tools/{service_path.lstrip('/')}"
+    credentials = Credentials(username=username, password=password)
     return await _call_registry_api("GET", endpoint, credentials=credentials)
 
 @mcp.tool()
-async def refresh_service(params: ServicePathParams) -> Dict[str, Any]:
+async def refresh_service(
+    service_path: str = Field(..., description="The unique path identifier for the service (e.g., '/fininfo'). Must start with '/'."),
+    username: str = Field(..., description="Username for registry authentication"),
+    password: str = Field(..., description="Password for registry authentication")
+) -> Dict[str, Any]:
     """
     Triggers a refresh of the tool list for a specific registered MCP server.
     The registry will re-connect to the target server to get its latest tools.
 
     Args:
-        params: ServicePathParams containing the service_path and credentials.
+        service_path: The unique path identifier for the service (e.g., '/fininfo'). Must start with '/'.
+        username: Username for registry authentication.
+        password: Password for registry authentication.
 
     Returns:
         Dict[str, Any]: Response from the registry API indicating the result of the refresh attempt.
@@ -346,8 +421,8 @@ async def refresh_service(params: ServicePathParams) -> Dict[str, Any]:
     Raises:
         Exception: If the API call fails.
     """
-    endpoint = f"/api/refresh/{params.service_path.lstrip('/')}"
-    credentials = Credentials(username=params.username, password=params.password)
+    endpoint = f"/api/refresh/{service_path.lstrip('/')}"
+    credentials = Credentials(username=username, password=password)
     return await _call_registry_api("POST", endpoint, credentials=credentials)
 
 
