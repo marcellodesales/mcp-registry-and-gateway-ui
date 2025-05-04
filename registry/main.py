@@ -1,5 +1,4 @@
 import os
-import re
 import json
 import secrets
 import asyncio
@@ -7,7 +6,7 @@ import subprocess
 from contextlib import asynccontextmanager
 from pathlib import Path  # Import Path
 from typing import Annotated, List, Set
-from datetime import datetime, timezone, timedelta
+from datetime import datetime, timezone
 
 from fastapi import (
     FastAPI,
@@ -25,7 +24,6 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from itsdangerous import URLSafeTimedSerializer, SignatureExpired, BadSignature
 from dotenv import load_dotenv
-import subprocess # Added for nginx reload
 import logging
 
 # --- MCP Client Imports --- START
@@ -506,13 +504,17 @@ async def get_tools_from_server(base_url: str) -> List[dict] | None: # Return li
                                     current_section = "args"
                                     section_content = [stripped_line[len("Args:"):].strip()]
                                 elif stripped_line.startswith("Returns:"):
-                                    if current_section != "main": parsed_desc[current_section] = "\n".join(section_content).strip()
-                                    else: parsed_desc["main"] = "\n".join(main_desc_lines).strip()
+                                    if current_section != "main": 
+                                        parsed_desc[current_section] = "\n".join(section_content).strip()
+                                    else: 
+                                        parsed_desc["main"] = "\n".join(main_desc_lines).strip()
                                     current_section = "returns"
                                     section_content = [stripped_line[len("Returns:"):].strip()]
                                 elif stripped_line.startswith("Raises:"):
-                                    if current_section != "main": parsed_desc[current_section] = "\n".join(section_content).strip()
-                                    else: parsed_desc["main"] = "\n".join(main_desc_lines).strip()
+                                    if current_section != "main": 
+                                        parsed_desc[current_section] = "\n".join(section_content).strip()
+                                    else: 
+                                        parsed_desc["main"] = "\n".join(main_desc_lines).strip()
                                     current_section = "raises"
                                     section_content = [stripped_line[len("Raises:"):].strip()]
                                 elif current_section == "main":
@@ -678,7 +680,7 @@ async def perform_single_health_check(path: str) -> tuple[str, datetime | None]:
 
     except asyncio.TimeoutError:
         # This catches timeout on asyncio.wait_for, slightly different from curl's --max-time
-        current_status = f"error: check process timeout"
+        current_status = "error: check process timeout"
         logger.info(f"Health check asyncio.wait_for timeout for {path} ({url})")
     except FileNotFoundError:
         current_status = "error: command not found"
@@ -1143,7 +1145,7 @@ async def register_service(
     license_str: Annotated[str, Form(alias="license")] = "N/A",
     username: Annotated[str, Depends(api_auth)] = None,
 ):
-    logger.info(f"[DEBUG] register_service() called with parameters:")
+    logger.info("[DEBUG] register_service() called with parameters:")
     logger.info(f"[DEBUG] - name: {name}")
     logger.info(f"[DEBUG] - description: {description}")
     logger.info(f"[DEBUG] - path: {path}")
@@ -1188,35 +1190,35 @@ async def register_service(
     logger.info(f"[DEBUG] Created server entry: {json.dumps(server_entry, indent=2)}")
 
     # Save to individual file
-    logger.info(f"[DEBUG] Attempting to save server data to file...")
+    logger.info("[DEBUG] Attempting to save server data to file...")
     success = save_server_to_file(server_entry)
     if not success:
-        logger.error(f"[ERROR] Failed to save server data to file")
+        logger.error("[ERROR] Failed to save server data to file")
         return JSONResponse(
             status_code=500, content={"error": "Failed to save server data"}
         )
-    logger.info(f"[DEBUG] Successfully saved server data to file")
+    logger.info("[DEBUG] Successfully saved server data to file")
 
     # Add to in-memory registry and default to disabled
-    logger.info(f"[DEBUG] Adding server to in-memory registry...")
+    logger.info("[DEBUG] Adding server to in-memory registry...")
     REGISTERED_SERVERS[path] = server_entry
-    logger.info(f"[DEBUG] Setting initial service state to disabled")
+    logger.info("[DEBUG] Setting initial service state to disabled")
     MOCK_SERVICE_STATE[path] = False
     # Set initial health status for the new service (always start disabled)
-    logger.info(f"[DEBUG] Setting initial health status to 'disabled'")
+    logger.info("[DEBUG] Setting initial health status to 'disabled'")
     SERVER_HEALTH_STATUS[path] = "disabled" # Start disabled
     SERVER_LAST_CHECK_TIME[path] = None # No check time yet
     # Ensure num_tools is present in the in-memory dict immediately
     if "num_tools" not in REGISTERED_SERVERS[path]:
-        logger.info(f"[DEBUG] Adding missing num_tools field to in-memory registry")
+        logger.info("[DEBUG] Adding missing num_tools field to in-memory registry")
         REGISTERED_SERVERS[path]["num_tools"] = 0
 
     # Regenerate Nginx config after successful registration
-    logger.info(f"[DEBUG] Attempting to regenerate Nginx configuration...")
+    logger.info("[DEBUG] Attempting to regenerate Nginx configuration...")
     if not regenerate_nginx_config():
-        logger.error(f"[ERROR] Failed to update Nginx configuration after registration")
+        logger.error("[ERROR] Failed to update Nginx configuration after registration")
     else:
-        logger.info(f"[DEBUG] Successfully regenerated Nginx configuration")
+        logger.info("[DEBUG] Successfully regenerated Nginx configuration")
 
     logger.info(f"[INFO] New service registered: '{name}' at path '{path}' by user '{username}'")
 
@@ -1231,10 +1233,10 @@ async def register_service(
     # --- Persist the updated state after registration --- END
 
     # Broadcast the updated status after registration
-    logger.info(f"[DEBUG] Creating task to broadcast health status...")
+    logger.info("[DEBUG] Creating task to broadcast health status...")
     asyncio.create_task(broadcast_health_status())
 
-    logger.info(f"[DEBUG] Registration complete, returning success response")
+    logger.info("[DEBUG] Registration complete, returning success response")
     return JSONResponse(
         status_code=201,
         content={
