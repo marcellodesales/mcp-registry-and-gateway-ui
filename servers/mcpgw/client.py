@@ -87,45 +87,48 @@ async def run(server_url, args):
                 print(f"Error calling 'get_server_details': {e}")
             # --- End Example ---
 
-            # --- Example: Call the register_service tool ---
-            print("\nCalling 'register_service' tool with hardcoded parameters")
+            # --- Example: Call the register_service tool (if enabled) ---
+            if args.test_register_service and args.test_register_service.lower() in ["true", "yes"]:
+                print("\nCalling 'register_service' tool with hardcoded parameters")
 
-            try:
-                # Pass hardcoded parameters to the register_service tool
-                result = await session.call_tool(
-                    "register_service", arguments={
-                        "server_name": "Example Service",
-                        "path": "/example-service",
-                        "proxy_pass_url": "http://localhost:9000",
-                        "description": "An example MCP service for demonstration purposes",
-                        "tags": ["example", "demo", "test"],
-                        "num_tools": 3,
-                        "num_stars": 5,
-                        "is_python": True,
-                        "license": "MIT",
-                        "username": args.username,
-                        "password": args.password
-                    }
-                )
-
-                # Display the results
-                print("=" * 50)
-                print("Result for register_service:")
-                print("=" * 50)
-                # The result content is usually a list of MessagePart objects
-                full_response_text = "".join(part.text for part in result.content if hasattr(part, 'text'))
                 try:
-                    # Attempt to parse and pretty-print if it's JSON
-                    parsed_json = json.loads(full_response_text)
-                    print(json.dumps(parsed_json, indent=2))
-                except json.JSONDecodeError:
-                    # Otherwise, just print the raw text
-                    print(full_response_text)
-                print("=" * 50)
+                    # Pass hardcoded parameters to the register_service tool
+                    result = await session.call_tool(
+                        "register_service", arguments={
+                            "server_name": "Example Service",
+                            "path": "/example-service",
+                            "proxy_pass_url": "http://localhost:9000",
+                            "description": "An example MCP service for demonstration purposes",
+                            "tags": ["example", "demo", "test"],
+                            "num_tools": 3,
+                            "num_stars": 5,
+                            "is_python": True,
+                            "license": "MIT",
+                            "username": args.username,
+                            "password": args.password
+                        }
+                    )
 
-            except Exception as e:
-                print(f"Error calling 'register_service': {e}")
-            # --- End Example ---
+                    # Display the results
+                    print("=" * 50)
+                    print("Result for register_service:")
+                    print("=" * 50)
+                    # The result content is usually a list of MessagePart objects
+                    full_response_text = "".join(part.text for part in result.content if hasattr(part, 'text'))
+                    try:
+                        # Attempt to parse and pretty-print if it's JSON
+                        parsed_json = json.loads(full_response_text)
+                        print(json.dumps(parsed_json, indent=2))
+                    except json.JSONDecodeError:
+                        # Otherwise, just print the raw text
+                        print(full_response_text)
+                    print("=" * 50)
+
+                except Exception as e:
+                    print(f"Error calling 'register_service': {e}")
+                # --- End Example ---
+            else:
+                print("\nSkipping 'register_service' tool example (use --test-register-service=true to enable)")
 
 
 if __name__ == "__main__":
@@ -154,6 +157,12 @@ if __name__ == "__main__":
         "--password",
         type=str,        
         help='Password for the MCP Gateway',
+    )
+    parser.add_argument(
+        "--test-register-service",
+        type=str,   
+        default="false",
+        help='Set to "true" to test the register_service tool (default: "false")',
     )
 
     # Parse the arguments

@@ -262,57 +262,6 @@ async def toggle_service(
     credentials = Credentials(username=username, password=password)
     return await _call_registry_api("POST", endpoint, credentials=credentials)
 
-# This implementation has been replaced by the one below
-# @mcp.tool()
-# async def register_service(
-#     server_name: str = Field(..., description="Display name for the server."),
-#     path: str = Field(..., description="Unique URL path prefix for the server (e.g., '/my-service'). Must start with '/'."),
-#     proxy_pass_url: str = Field(..., description="The internal URL where the actual MCP server is running (e.g., 'http://localhost:8001')."),
-#     description: Optional[str] = Field(None, description="Optional description of the server."),
-#     tags: Optional[List[str]] = Field(None, description="Optional list of tags for categorization."),
-#     is_python: Optional[bool] = Field(False, description="Whether the server is implemented in Python."),
-#     license: Optional[str] = Field("N/A", description="License information for the server."),
-#     username: str = Field(..., description="Username for registry authentication"),
-#     password: str = Field(..., description="Password for registry authentication")
-# ) -> Dict[str, Any]:
-#     """
-#     Registers a new MCP server with the gateway.
-#
-#     Args:
-#         server_name: Display name for the server.
-#         path: Unique URL path prefix for the server (e.g., '/my-service'). Must start with '/'.
-#         proxy_pass_url: The internal URL where the actual MCP server is running (e.g., 'http://localhost:8001').
-#         description: Optional description of the server.
-#         tags: Optional list of tags for categorization.
-#         is_python: Whether the server is implemented in Python (default: False).
-#         license: License information for the server (default: 'N/A').
-#         username: Username for registry authentication.
-#         password: Password for registry authentication.
-#
-#     Returns:
-#         Dict[str, Any]: Response from the registry API, likely including the registered server details.
-#
-#     Raises:
-#         Exception: If the API call fails.
-#     """
-#     endpoint = "/register"
-#     # Extract username and password for credentials
-#     credentials = Credentials(username=username, password=password)
-#
-#     # Create data to send to the API (excluding username and password)
-#     data_to_send = {
-#         "server_name": server_name,
-#         "path": path,
-#         "proxy_pass_url": proxy_pass_url,
-#         "description": description,
-#         "tags": tags,
-#         "is_python": is_python,
-#         "license": license
-#     }
-#     # Remove None values
-#     data_to_send = {k: v for k, v in data_to_send.items() if v is not None}
-#
-#     return await _call_registry_api("POST", endpoint, credentials=credentials, json=data_to_send)
 
 @mcp.tool()
 async def register_service(
@@ -424,6 +373,32 @@ async def refresh_service(
     endpoint = f"/api/refresh/{service_path.lstrip('/')}"
     credentials = Credentials(username=username, password=password)
     return await _call_registry_api("POST", endpoint, credentials=credentials)
+
+
+@mcp.tool()
+async def get_server_details(
+    service_path: str = Field(..., description="The unique path identifier for the service (e.g., '/fininfo'). Must start with '/'. Use '/all' to get details for all registered servers."),
+    username: str = Field(..., description="Username for registry authentication"),
+    password: str = Field(..., description="Password for registry authentication")
+) -> Dict[str, Any]:
+    """
+    Retrieves detailed information about a registered MCP server.
+    
+    Args:
+        service_path: The unique path identifier for the service (e.g., '/fininfo'). Must start with '/'.
+                      Use '/all' to get details for all registered servers.
+        username: Username for registry authentication.
+        password: Password for registry authentication.
+        
+    Returns:
+        Dict[str, Any]: Detailed information about the specified server or all servers if '/all' is specified.
+        
+    Raises:
+        Exception: If the API call fails or the server is not registered.
+    """
+    endpoint = f"/api/server_details/{service_path.lstrip('/')}"
+    credentials = Credentials(username=username, password=password)
+    return await _call_registry_api("GET", endpoint, credentials=credentials)
 
 
 # --- Main Execution ---
