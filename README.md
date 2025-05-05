@@ -11,6 +11,7 @@
 
 [Model Context Protocol (MCP)](https://modelcontextprotocol.io/introduction) is an open standard protocol that allows AI Models to connect with external systems, tools, and data sources. A common problem that enterprises face while using MCP servers is that there is a need for a central point of access to a curated list of MCP servers and a catalog of such servers. This is the precise problem that this application provides a solution for by implementing an **MCP Gateway & Registry**. 
 
+**<u>Demo Video</u>**: [https://www.youtube.com/watch?v=o_Wich7AChk](https://www.youtube.com/watch?v=o_Wich7AChk)
 
 ## Architecture
 
