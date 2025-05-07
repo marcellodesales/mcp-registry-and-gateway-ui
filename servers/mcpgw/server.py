@@ -127,6 +127,13 @@ async def load_faiss_data_for_mcpgw():
 
 # --- FAISS and Sentence Transformer Integration for mcpgw --- END
 
+# --- Pydantic Models for Credentials and Parameters ---
+
+class Credentials(BaseModel):
+    """Credentials for authentication with the registry API."""
+    username: str = Field(..., description="Username for registry authentication")
+    password: str = Field(..., description="Password for registry authentication")
+
 
 async def _ensure_authenticated(credentials: Credentials):
     """Ensures an active session cookie exists, attempts login if not."""
@@ -220,12 +227,6 @@ mcp = FastMCP("mcpgw", port=args.port) # Changed server name
 
 
 # --- Pydantic Models for Credentials and Parameters ---
-
-class Credentials(BaseModel):
-    """Credentials for authentication with the registry API."""
-    username: str = Field(..., description="Username for registry authentication")
-    password: str = Field(..., description="Password for registry authentication")
-
 
 # Pydantic classes for ServicePathParams and RegisterServiceParams have been removed
 # as they are no longer needed. The parameters are now directly defined in the functions.
