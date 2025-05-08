@@ -8,6 +8,10 @@ from pathlib import Path  # Import Path
 from typing import Annotated, List, Set
 from datetime import datetime, timezone
 
+import faiss
+import numpy as np
+from sentence_transformers import SentenceTransformer
+
 from fastapi import (
     FastAPI,
     Request,
@@ -68,6 +72,18 @@ STATE_FILE_PATH = SERVERS_DIR / "server_state.json"
 # LOG_FILE_PATH = BASE_DIR / "registry.log"
 LOG_FILE_PATH = CONTAINER_LOG_DIR / "registry.log"
 
+# --- FAISS Vector DB Configuration --- START
+FAISS_INDEX_PATH = SERVERS_DIR / "service_index.faiss"
+FAISS_METADATA_PATH = SERVERS_DIR / "service_index_metadata.json"
+EMBEDDING_DIMENSION = 384  # For all-MiniLM-L6-v2
+embedding_model = None # Will be loaded in lifespan
+faiss_index = None     # Will be loaded/created in lifespan
+# Stores: { service_path: {"id": faiss_internal_id, "text_for_embedding": "...", "full_server_info": { ... }} }
+# faiss_internal_id is the ID used with faiss_index.add_with_ids()
+faiss_metadata_store = {}
+next_faiss_id_counter = 0
+# --- FAISS Vector DB Configuration --- END
+
 # --- REMOVE Logging Setup from here --- START
 # # Ensure log directory exists
 # CONTAINER_LOG_DIR.mkdir(parents=True, exist_ok=True)
@@ -106,6 +122,159 @@ SERVER_LAST_CHECK_TIME = {} # path -> datetime of last check attempt (UTC)
 
 # --- WebSocket Connection Management ---
 active_connections: Set[WebSocket] = set()
+
+# --- FAISS Helper Functions --- START
+
+def _get_text_for_embedding(server_info: dict) -> str:
+    """Prepares a consistent text string from server info for embedding."""
+    name = server_info.get("server_name", "")
+    description = server_info.get("description", "")
+    tags = server_info.get("tags", [])
+    tag_string = ", ".join(tags)
+    return f"Name: {name}\\nDescription: {description}\\nTags: {tag_string}"
+
+def load_faiss_data():
+    global faiss_index, faiss_metadata_store, embedding_model, next_faiss_id_counter, CONTAINER_REGISTRY_DIR, SERVERS_DIR
+    logger.info("Loading FAISS data and embedding model...")
+
+    SERVERS_DIR.mkdir(parents=True, exist_ok=True)
+
+    try:
+        model_cache_path = CONTAINER_REGISTRY_DIR / ".cache" 
+        model_cache_path.mkdir(parents=True, exist_ok=True)
+        # Set SENTENCE_TRANSFORMERS_HOME to use the defined cache path
+        # This needs to be set before SentenceTransformer is imported or used if we want to control the cache location this way.
+        # However, setting it here is fine as it's done before the model is instantiated.
+        original_st_home = os.environ.get('SENTENCE_TRANSFORMERS_HOME')
+        os.environ['SENTENCE_TRANSFORMERS_HOME'] = str(model_cache_path)
+        logger.info(f"Attempting to load SentenceTransformer model 'all-MiniLM-L6-v2'. Cache: {model_cache_path}")
+        
+        embedding_model = SentenceTransformer('all-MiniLM-L6-v2')
+        
+        # Restore original environment variable if it was set
+        if original_st_home:
+            os.environ['SENTENCE_TRANSFORMERS_HOME'] = original_st_home
+        else:
+            del os.environ['SENTENCE_TRANSFORMERS_HOME'] # Remove if not originally set
+            
+        logger.info("SentenceTransformer model 'all-MiniLM-L6-v2' loaded successfully.")
+    except Exception as e:
+        logger.error(f"Failed to load SentenceTransformer model: {e}", exc_info=True)
+        embedding_model = None 
+
+    if FAISS_INDEX_PATH.exists() and FAISS_METADATA_PATH.exists():
+        try:
+            logger.info(f"Loading FAISS index from {FAISS_INDEX_PATH}")
+            faiss_index = faiss.read_index(str(FAISS_INDEX_PATH))
+            logger.info(f"Loading FAISS metadata from {FAISS_METADATA_PATH}")
+            with open(FAISS_METADATA_PATH, "r") as f:
+                loaded_metadata = json.load(f)
+                faiss_metadata_store = loaded_metadata.get("metadata", {})
+                next_faiss_id_counter = loaded_metadata.get("next_id", 0)
+            logger.info(f"FAISS data loaded. Index size: {faiss_index.ntotal if faiss_index else 0}. Next ID: {next_faiss_id_counter}")
+            if faiss_index and faiss_index.d != EMBEDDING_DIMENSION:
+                logger.warning(f"Loaded FAISS index dimension ({faiss_index.d}) differs from expected ({EMBEDDING_DIMENSION}). Re-initializing.")
+                faiss_index = faiss.IndexIDMap(faiss.IndexFlatL2(EMBEDDING_DIMENSION))
+                faiss_metadata_store = {}
+                next_faiss_id_counter = 0
+        except Exception as e:
+            logger.error(f"Error loading FAISS data: {e}. Re-initializing.", exc_info=True)
+            faiss_index = faiss.IndexIDMap(faiss.IndexFlatL2(EMBEDDING_DIMENSION))
+            faiss_metadata_store = {}
+            next_faiss_id_counter = 0
+    else:
+        logger.info("FAISS index or metadata not found. Initializing new.")
+        faiss_index = faiss.IndexIDMap(faiss.IndexFlatL2(EMBEDDING_DIMENSION))
+        faiss_metadata_store = {}
+        next_faiss_id_counter = 0
+
+def save_faiss_data():
+    global faiss_index, faiss_metadata_store, next_faiss_id_counter
+    if faiss_index is None:
+        logger.error("FAISS index is not initialized. Cannot save.")
+        return
+    try:
+        SERVERS_DIR.mkdir(parents=True, exist_ok=True) # Ensure directory exists
+        logger.info(f"Saving FAISS index to {FAISS_INDEX_PATH} (Size: {faiss_index.ntotal})")
+        faiss.write_index(faiss_index, str(FAISS_INDEX_PATH))
+        logger.info(f"Saving FAISS metadata to {FAISS_METADATA_PATH}")
+        with open(FAISS_METADATA_PATH, "w") as f:
+            json.dump({"metadata": faiss_metadata_store, "next_id": next_faiss_id_counter}, f, indent=2)
+        logger.info("FAISS data saved successfully.")
+    except Exception as e:
+        logger.error(f"Error saving FAISS data: {e}", exc_info=True)
+
+async def add_or_update_service_in_faiss(service_path: str, server_info: dict):
+    global faiss_index, faiss_metadata_store, embedding_model, next_faiss_id_counter
+
+    if embedding_model is None or faiss_index is None:
+        logger.error("Embedding model or FAISS index not initialized. Cannot add/update service in FAISS.")
+        return
+
+    logger.info(f"Attempting to add/update service '{service_path}' in FAISS.")
+    text_to_embed = _get_text_for_embedding(server_info)
+    
+    current_faiss_id = -1
+    needs_new_embedding = True # Assume new embedding is needed
+
+    existing_entry = faiss_metadata_store.get(service_path)
+
+    if existing_entry:
+        current_faiss_id = existing_entry["id"]
+        if existing_entry.get("text_for_embedding") == text_to_embed:
+            needs_new_embedding = False
+            logger.info(f"Text for embedding for '{service_path}' has not changed. Will update metadata store only if server_info differs.")
+        else:
+            logger.info(f"Text for embedding for '{service_path}' has changed. Re-embedding required.")
+    else: # New service
+        current_faiss_id = next_faiss_id_counter
+        next_faiss_id_counter += 1
+        logger.info(f"New service '{service_path}'. Assigning new FAISS ID: {current_faiss_id}.")
+        needs_new_embedding = True # Definitely needs embedding
+
+    if needs_new_embedding:
+        try:
+            # Run model encoding in a separate thread to avoid blocking asyncio event loop
+            embedding = await asyncio.to_thread(embedding_model.encode, [text_to_embed])
+            embedding_np = np.array([embedding[0]], dtype=np.float32)
+            
+            ids_to_remove = np.array([current_faiss_id])
+            if existing_entry: # Only attempt removal if it was an existing entry
+                try:
+                    # remove_ids returns number of vectors removed.
+                    # It's okay if the ID isn't found (returns 0).
+                    num_removed = faiss_index.remove_ids(ids_to_remove)
+                    if num_removed > 0:
+                        logger.info(f"Removed {num_removed} old vector(s) for FAISS ID {current_faiss_id} ({service_path}).")
+                    else:
+                        logger.info(f"No old vector found for FAISS ID {current_faiss_id} ({service_path}) during update, or ID not in index.")
+                except Exception as e_remove: # Should be rare with IndexIDMap if ID was valid type
+                    logger.warning(f"Issue removing FAISS ID {current_faiss_id} for {service_path}: {e_remove}. Proceeding to add.")
+            
+            faiss_index.add_with_ids(embedding_np, np.array([current_faiss_id]))
+            logger.info(f"Added/Updated vector for '{service_path}' with FAISS ID {current_faiss_id}.")
+        except Exception as e:
+            logger.error(f"Error encoding or adding embedding for '{service_path}': {e}", exc_info=True)
+            return # Don't update metadata or save if embedding failed
+
+    # Update metadata store if new, or if text changed, or if full_server_info changed
+    # --- Enrich server_info with is_enabled status before storing --- START
+    enriched_server_info = server_info.copy()
+    enriched_server_info["is_enabled"] = MOCK_SERVICE_STATE.get(service_path, False) # Default to False if not found
+    # --- Enrich server_info with is_enabled status before storing --- END
+
+    if existing_entry is None or needs_new_embedding or existing_entry.get("full_server_info") != enriched_server_info:
+        faiss_metadata_store[service_path] = {
+            "id": current_faiss_id,
+            "text_for_embedding": text_to_embed,
+            "full_server_info": enriched_server_info # Store the enriched server_info
+        }
+        logger.debug(f"Updated faiss_metadata_store for '{service_path}'.")
+        await asyncio.to_thread(save_faiss_data) # Persist changes in a thread
+    else:
+        logger.debug(f"No changes to FAISS vector or enriched full_server_info for '{service_path}'. Skipping save.")
+
+# --- FAISS Helper Functions --- END
 
 async def broadcast_health_status():
     """Sends the current health status to all connected WebSocket clients."""
@@ -662,14 +831,23 @@ async def perform_single_health_check(path: str) -> tuple[str, datetime | None]:
                             # Save the updated server info to its file
                             if not save_server_to_file(REGISTERED_SERVERS[path]):
                                 logger.error(f"ERROR: Failed to save updated tool list/count for {path} to file.")
+                            # --- Update FAISS after tool list/count change --- START
+                            # No explicit call here, will be handled by the one at the end of perform_single_health_check
+                            # logger.info(f"Updating FAISS metadata for '{path}' after tool list/count update.")
+                            # await add_or_update_service_in_faiss(path, REGISTERED_SERVERS[path]) # Moved to end
+                            # --- Update FAISS after tool list/count change --- END
                         else:
                              logger.info(f"Tool list for {path} remains unchanged. No update needed.")
                     else:
                         logger.info(f"Failed to retrieve tool list for healthy service {path}. List/Count remains unchanged.")
+                        # Even if tool list fetch failed, server is healthy.
+                        # FAISS update will occur at the end of this function with current REGISTERED_SERVERS[path].
                 else:
                     # This case should technically not be reachable due to earlier url check
                     logger.info(f"Cannot fetch tool list for {path}: proxy_pass_url is missing.")
             # --- Check for transition to healthy state --- END
+            # If it was already healthy, and tools changed, the above block (current_tool_list_str != new_tool_list_str) handles it.
+            # The FAISS update with the latest REGISTERED_SERVERS[path] will happen at the end of this function.
 
         elif proc.returncode == 28:
             current_status = f"error: timeout ({HEALTH_CHECK_TIMEOUT_SECONDS}s)"
@@ -702,6 +880,11 @@ async def perform_single_health_check(path: str) -> tuple[str, datetime | None]:
     # Update the global status *after* the check completes
     SERVER_HEALTH_STATUS[path] = current_status
     logger.info(f"Final health status for {path}: {current_status}")
+
+    # --- Update FAISS with final server_info state after health check attempt ---
+    if path in REGISTERED_SERVERS and embedding_model and faiss_index is not None:
+        logger.info(f"Updating FAISS metadata for '{path}' post health check (status: {current_status}).")
+        await add_or_update_service_in_faiss(path, REGISTERED_SERVERS[path])
 
     # --- Regenerate Nginx if status affecting it changed --- START
     # Check if the service is enabled AND its Nginx-relevant status changed
@@ -801,8 +984,25 @@ async def lifespan(app: FastAPI):
     logger.info("Logging configured. Running startup tasks...") # Now logger is configured
     # --- Configure Logging INSIDE lifespan --- END
 
+    # 0. Load FAISS data and embedding model
+    load_faiss_data() # Loads model, empty index or existing index. Synchronous.
+
     # 1. Load server definitions and persisted enabled/disabled state
-    load_registered_servers_and_state()
+    load_registered_servers_and_state() # This populates REGISTERED_SERVERS. Synchronous.
+
+    # 1.5 Sync FAISS with loaded servers (initial build or update)
+    if embedding_model and faiss_index is not None: # Check faiss_index is not None
+        logger.info("Performing initial FAISS synchronization with loaded server definitions...")
+        sync_tasks = []
+        for path, server_info in REGISTERED_SERVERS.items():
+            # add_or_update_service_in_faiss is async, can be gathered
+            sync_tasks.append(add_or_update_service_in_faiss(path, server_info))
+        
+        if sync_tasks:
+            await asyncio.gather(*sync_tasks)
+        logger.info("Initial FAISS synchronization complete.")
+    else:
+        logger.warning("Skipping initial FAISS synchronization: embedding model or FAISS index not ready.")
 
     # 2. Perform initial health checks concurrently for *enabled* services
     logger.info("Performing initial health checks for enabled services...")
@@ -838,6 +1038,10 @@ async def lifespan(app: FastAPI):
             else:
                 status, _ = result # Unpack the result tuple
                 logger.info(f"Initial health check completed for {path}: Status = {status}")
+                # Update FAISS with potentially changed server_info (e.g., num_tools from health check)
+                if path in REGISTERED_SERVERS and embedding_model and faiss_index is not None:
+                     # This runs after each health check result, can be awaited individually
+                    await add_or_update_service_in_faiss(path, REGISTERED_SERVERS[path])
     else:
         logger.info("No services are initially enabled.")
 
@@ -1063,6 +1267,14 @@ async def toggle_service_route(
         # Update global state directly when disabling
         SERVER_HEALTH_STATUS[service_path] = new_status
         logger.info(f"Service {service_path} toggled OFF. Status set to disabled.")
+        # --- Update FAISS metadata for disabled service --- START
+        if embedding_model and faiss_index is not None:
+            logger.info(f"Updating FAISS metadata for disabled service {service_path}.")
+            # REGISTERED_SERVERS[service_path] contains the static definition
+            await add_or_update_service_in_faiss(service_path, REGISTERED_SERVERS[service_path])
+        else:
+            logger.warning(f"Skipped FAISS metadata update for disabled service {service_path}: model or index not ready.")
+        # --- Update FAISS metadata for disabled service --- END
 
     # --- Send *targeted* update via WebSocket --- START
     # Send immediate feedback for the toggled service only
@@ -1228,6 +1440,15 @@ async def register_service(
         logger.error("[ERROR] Failed to update Nginx configuration after registration")
     else:
         logger.info("[DEBUG] Successfully regenerated Nginx configuration")
+
+    # --- Add to FAISS Index --- START
+    logger.info(f"[DEBUG] Adding/updating service '{path}' in FAISS index after registration...")
+    if embedding_model and faiss_index is not None:
+        await add_or_update_service_in_faiss(path, server_entry) # server_entry is the new service info
+        logger.info(f"[DEBUG] Service '{path}' processed for FAISS index.")
+    else:
+        logger.warning(f"[DEBUG] Skipped FAISS update for '{path}': model or index not ready.")
+    # --- Add to FAISS Index --- END
 
     logger.info(f"[INFO] New service registered: '{name}' at path '{path}' by user '{username}'")
 
@@ -1464,6 +1685,15 @@ async def edit_server_submit(
     if not regenerate_nginx_config():
         logger.error("ERROR: Failed to update Nginx configuration after edit.")
         # Consider how to notify user - maybe flash message system needed
+        
+    # --- Update FAISS Index --- START
+    logger.info(f"Updating service '{service_path}' in FAISS index after edit.")
+    if embedding_model and faiss_index is not None:
+        await add_or_update_service_in_faiss(service_path, updated_server_entry)
+        logger.info(f"Service '{service_path}' updated in FAISS index.")
+    else:
+        logger.warning(f"Skipped FAISS update for '{service_path}' post-edit: model or index not ready.")
+    # --- Update FAISS Index --- END
 
     logger.info(f"Server '{name}' ({service_path}) updated by user '{username}'")
 

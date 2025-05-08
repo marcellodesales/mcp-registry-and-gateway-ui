@@ -20,6 +20,16 @@ if [ ! -d "$LOGS_DIR" ]; then
     mkdir -p "$LOGS_DIR"
 fi
 
+# The virtual environment is now created and populated by the Dockerfile.
+# We just need to ensure SCRIPT_DIR points to /app if this script is not run from /app
+# Assuming SCRIPT_DIR will be /app based on WORKDIR and entrypoint execution context
+
+# Activate the pre-built virtual environment
+echo "Activating the pre-built virtual environment at $SCRIPT_DIR/.venv..."
+source "$SCRIPT_DIR/.venv/bin/activate"
+
+# Dependency installation is now handled by the Dockerfile.
+
 # Find all subdirectories in the servers directory
 subdirs=$(find "$SERVERS_DIR" -mindepth 1 -maxdepth 1 -type d | sort)
 
@@ -39,23 +49,11 @@ for subdir in $subdirs; do
     # Move into the subdirectory
     cd "$subdir" || continue
     
-    echo "Setting up Python environment..."
-    # Create a Python virtual environment using uv
-    uv venv --python 3.12
-    
-    # Activate the virtual environment
-    source .venv/bin/activate
-    
-    echo "Installing requirements in $(pwd)..."
-    # Install requirements from pyproject.toml
-    if [ -f "pyproject.toml" ]; then
-        uv pip install --requirement pyproject.toml >> "$log_file" 2>&1
-    else
-        echo "Warning: pyproject.toml not found in $subdir" | tee -a "$log_file"
-    fi
+    # Python environment setup is now global, so no local venv creation/activation needed here
     
     echo "Starting server on port $port (logs in $log_file)..."
     # Start the server in the background with the current port and redirect output to log file
+    # uv run will use the globally activated venv
     uv run python server.py --port $port >> "$log_file" 2>&1 &
     
     # Store the process ID for potential cleanup later
@@ -65,8 +63,7 @@ for subdir in $subdirs; do
     # Save PID to a file for easy management
     echo "$server_pid" > "$pid_file"
     
-    # Deactivate the virtual environment
-    deactivate
+    # No local deactivation needed
     
     # Return to the original directory
     cd "$SCRIPT_DIR"
@@ -77,6 +74,11 @@ for subdir in $subdirs; do
     echo "-----------------------------------"
 done
 
+# Deactivate the global virtual environment
+echo "Deactivating the global virtual environment."
+deactivate
+
 echo "All servers have been started. Logs are available in the $LOGS_DIR directory."
+echo "The shared virtual environment at $SCRIPT_DIR/.venv was used."
 echo "To stop all servers, use: kill \$(cat $LOGS_DIR/*.pid)"
 echo "To view logs in real-time for a specific server, use: tail -f $LOGS_DIR/server_name_port.log"

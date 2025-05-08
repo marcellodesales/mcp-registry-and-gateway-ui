@@ -26,9 +26,11 @@ WORKDIR /app
 # Copy the entire project context into the container
 COPY . /app/
 
-# Install Python dependencies for the MCP Registry using uv
-# The server dependencies will be installed by start_all_servers.sh at runtime
-RUN cd /app && uv pip install --system --requirement pyproject.toml
+# Create the shared virtual environment that start_all_servers.sh will use
+RUN uv venv /app/.venv --python 3.12
+
+# Install Python dependencies from pyproject.toml INTO the shared venv
+RUN . /app/.venv/bin/activate && uv pip install --no-cache-dir /app
 
 # Generate self-signed SSL certificate for Nginx
 # Create directories for SSL certs

@@ -9,10 +9,15 @@ import asyncio # Added for locking
 import logging
 import json
 import websockets # For WebSocket connections
+from pathlib import Path # Added Path
 from pydantic import BaseModel, Field
 from mcp.server.fastmcp import FastMCP
 from typing import Dict, Any, Optional, ClassVar, List
 from dotenv import load_dotenv
+from sentence_transformers import SentenceTransformer # Added
+import numpy as np # Added
+from sklearn.metrics.pairwise import cosine_similarity # Added
+import faiss # Added
 
 # Configure logging
 logging.basicConfig(
@@ -34,6 +39,150 @@ if not REGISTRY_BASE_URL:
 _session_cookie: Optional[str] = None
 _auth_lock = asyncio.Lock()
 
+# --- FAISS and Sentence Transformer Integration for mcpgw --- START
+_faiss_data_lock = asyncio.Lock()
+_embedding_model_mcpgw: Optional[SentenceTransformer] = None
+_faiss_index_mcpgw: Optional[faiss.Index] = None
+_faiss_metadata_mcpgw: Optional[Dict[str, Any]] = None # This will store the content of service_index_metadata.json
+_last_faiss_index_mtime: Optional[float] = None
+_last_faiss_metadata_mtime: Optional[float] = None
+
+# Determine base path for mcpgw server to find registry's server data
+# Assumes mcpgw server.py is in /app/servers/mcpgw/
+# And registry FAISS files are in /app/registry/servers/
+_registry_server_data_path = Path(__file__).resolve().parent.parent.parent / "registry" / "servers"
+FAISS_INDEX_PATH_MCPGW = _registry_server_data_path / "service_index.faiss"
+FAISS_METADATA_PATH_MCPGW = _registry_server_data_path / "service_index_metadata.json"
+EMBEDDING_DIMENSION_MCPGW = 384 # Should match the one used in main registry
+
+async def load_faiss_data_for_mcpgw():
+    """Loads the FAISS index, metadata, and embedding model for the mcpgw server.
+       Reloads data if underlying files have changed since last load.
+    """
+    global _embedding_model_mcpgw, _faiss_index_mcpgw, _faiss_metadata_mcpgw
+    global _last_faiss_index_mtime, _last_faiss_metadata_mtime
+    
+    async with _faiss_data_lock:
+        # Load embedding model if not already loaded (model doesn't change on disk typically)
+        if _embedding_model_mcpgw is None:
+            try:
+                logger.info("MCPGW: Loading SentenceTransformer model 'all-MiniLM-L6-v2'...")
+                _embedding_model_mcpgw = await asyncio.to_thread(SentenceTransformer, 'all-MiniLM-L6-v2')
+                logger.info("MCPGW: SentenceTransformer model loaded.")
+            except Exception as e:
+                logger.error(f"MCPGW: Failed to load SentenceTransformer model: {e}", exc_info=True)
+                return # Cannot proceed without the model for subsequent logic
+
+        # Check FAISS index file
+        index_file_changed = False
+        if FAISS_INDEX_PATH_MCPGW.exists():
+            try:
+                current_index_mtime = await asyncio.to_thread(os.path.getmtime, FAISS_INDEX_PATH_MCPGW)
+                if _faiss_index_mcpgw is None or _last_faiss_index_mtime is None or current_index_mtime > _last_faiss_index_mtime:
+                    logger.info(f"MCPGW: FAISS index file {FAISS_INDEX_PATH_MCPGW} has changed or not loaded. Reloading...")
+                    _faiss_index_mcpgw = await asyncio.to_thread(faiss.read_index, str(FAISS_INDEX_PATH_MCPGW))
+                    _last_faiss_index_mtime = current_index_mtime
+                    index_file_changed = True # Mark that it was reloaded
+                    logger.info(f"MCPGW: FAISS index loaded. Total vectors: {_faiss_index_mcpgw.ntotal}")
+                    if _faiss_index_mcpgw.d != EMBEDDING_DIMENSION_MCPGW:
+                        logger.warning(f"MCPGW: Loaded FAISS index dimension ({_faiss_index_mcpgw.d}) differs from expected ({EMBEDDING_DIMENSION_MCPGW}). Search might be compromised.")
+                else:
+                    logger.debug("MCPGW: FAISS index file unchanged since last load.")
+            except Exception as e:
+                logger.error(f"MCPGW: Failed to load or check FAISS index: {e}", exc_info=True)
+                _faiss_index_mcpgw = None # Ensure it's None on error
+        else:
+            logger.warning(f"MCPGW: FAISS index file {FAISS_INDEX_PATH_MCPGW} does not exist.")
+            _faiss_index_mcpgw = None
+            _last_faiss_index_mtime = None
+
+        # Check FAISS metadata file
+        metadata_file_changed = False
+        if FAISS_METADATA_PATH_MCPGW.exists():
+            try:
+                current_metadata_mtime = await asyncio.to_thread(os.path.getmtime, FAISS_METADATA_PATH_MCPGW)
+                if _faiss_metadata_mcpgw is None or _last_faiss_metadata_mtime is None or current_metadata_mtime > _last_faiss_metadata_mtime or index_file_changed:
+                    logger.info(f"MCPGW: FAISS metadata file {FAISS_METADATA_PATH_MCPGW} has changed, not loaded, or index changed. Reloading...")
+                    with open(FAISS_METADATA_PATH_MCPGW, "r") as f:
+                        content = await asyncio.to_thread(f.read)
+                        _faiss_metadata_mcpgw = await asyncio.to_thread(json.loads, content)
+                    _last_faiss_metadata_mtime = current_metadata_mtime
+                    metadata_file_changed = True
+                    logger.info(f"MCPGW: FAISS metadata loaded. Paths: {len(_faiss_metadata_mcpgw.get('metadata', {})) if _faiss_metadata_mcpgw else 'N/A'}")
+                else:
+                    logger.debug("MCPGW: FAISS metadata file unchanged since last load.")
+            except Exception as e:
+                logger.error(f"MCPGW: Failed to load or check FAISS metadata: {e}", exc_info=True)
+                _faiss_metadata_mcpgw = None # Ensure it's None on error
+        else:
+            logger.warning(f"MCPGW: FAISS metadata file {FAISS_METADATA_PATH_MCPGW} does not exist.")
+            _faiss_metadata_mcpgw = None
+            _last_faiss_metadata_mtime = None
+
+# Call it once at startup, but allow lazy loading if it fails initially
+# This direct call might be problematic if server.py is imported elsewhere before app runs.
+# A better approach would be a startup event if FastMCP supports it.
+# For now, it will attempt to load on first tool call if still None.
+# asyncio.create_task(load_faiss_data_for_mcpgw()) # Consider FastMCP startup hook
+
+# --- FAISS and Sentence Transformer Integration for mcpgw --- END
+
+# --- Pydantic Models for Credentials and Parameters ---
+
+class Credentials(BaseModel):
+    """Credentials for authentication with the registry API."""
+    username: str = Field(..., description="Username for registry authentication")
+    password: str = Field(..., description="Password for registry authentication")
+
+
+async def _ensure_authenticated(credentials: Credentials):
+    """Ensures an active session cookie exists, attempts login if not."""
+    global _session_cookie
+    if _session_cookie is None:
+        async with _auth_lock: # Ensure only one coroutine attempts login at a time
+            # Double-check after acquiring the lock
+            if _session_cookie is None:
+                logger.info("MCPGW: No active session cookie. Attempting to authenticate with the main registry...")
+                login_url = f"{REGISTRY_BASE_URL.rstrip('/')}/login"
+                try:
+                    async with httpx.AsyncClient(timeout=Constants.REQUEST_TIMEOUT) as client:
+                        login_response = await client.post(
+                            login_url,
+                            data={"username": credentials.username, "password": credentials.password},
+                            headers={"Content-Type": "application/x-www-form-urlencoded"},
+                            follow_redirects=False
+                        )
+                        if login_response.status_code not in [200, 303]:
+                            login_response.raise_for_status()
+                        
+                        cookie_value = login_response.cookies.get("mcp_gateway_session")
+                        if not cookie_value and 'set-cookie' in login_response.headers:
+                            cookie_header = login_response.headers['set-cookie']
+                            if 'mcp_gateway_session=' in cookie_header:
+                                cookie_value = cookie_header.split('mcp_gateway_session=')[1].split(';')[0].strip()
+
+                        if cookie_value:
+                            _session_cookie = cookie_value
+                            logger.info("MCPGW: Authentication successful. Session cookie obtained.")
+                        else:
+                            # Simplified error logging for brevity in this new function
+                            logger.error("MCPGW: Authentication failed: 'mcp_gateway_session' cookie not found.")
+                            raise Exception("Authentication failed: Session cookie not found.")
+                except httpx.HTTPStatusError as e:
+                    error_detail = f"HTTP Status {e.response.status_code}"
+                    try: error_detail += f" - Detail: {e.response.json().get('detail', 'N/A')}" 
+                    except: pass
+                    logger.error(f"MCPGW: Authentication failed: {error_detail}")
+                    raise Exception(f"Authentication failed: {error_detail}") from e
+                except httpx.RequestError as e:
+                    logger.error(f"MCPGW: Authentication failed: Could not connect to registry at {login_url}. Error: {e}")
+                    raise Exception(f"Authentication failed: Request Error {e}") from e
+                except Exception as e:
+                    logger.error(f"MCPGW: An unexpected error occurred during authentication: {e}")
+                    raise Exception(f"An unexpected error occurred during authentication: {e}") from e
+    # If we reach here, cookie should exist or an error was raised.
+    if _session_cookie is None: # Should be redundant given the logic above, but as a safeguard.
+        raise Exception("MCPGW: Unable to establish authenticated session.")
 
 class Constants(BaseModel):
     # Using ClassVar to define class-level constants
@@ -79,12 +228,6 @@ mcp = FastMCP("mcpgw", port=args.port) # Changed server name
 
 # --- Pydantic Models for Credentials and Parameters ---
 
-class Credentials(BaseModel):
-    """Credentials for authentication with the registry API."""
-    username: str = Field(..., description="Username for registry authentication")
-    password: str = Field(..., description="Password for registry authentication")
-
-
 # Pydantic classes for ServicePathParams and RegisterServiceParams have been removed
 # as they are no longer needed. The parameters are now directly defined in the functions.
 
@@ -104,110 +247,112 @@ async def _call_registry_api(method: str, endpoint: str, credentials: Credential
     Returns:
         Dict[str, Any]: JSON response from the API
     """
-    global _session_cookie
+    global _session_cookie # Still needed here to use it
     url = f"{REGISTRY_BASE_URL.rstrip('/')}{endpoint}"
+
+    # Ensure authenticated session exists
+    await _ensure_authenticated(credentials)
 
     # Use a single client instance for potential connection pooling benefits
     async with httpx.AsyncClient(timeout=Constants.REQUEST_TIMEOUT) as client:
+        # --- REMOVE Authentication Check from here, it's now in _ensure_authenticated ---
+        # if _session_cookie is None:
+        #     async with _auth_lock:
+        #         # Double-check after acquiring the lock in case another coroutine finished auth
+        #         if _session_cookie is None:
+        #             logger.info("No active session cookie. Attempting to authenticate with the registry...")
+        #             login_url = f"{REGISTRY_BASE_URL.rstrip('/')}/login"
+        #             logger.debug(f"login_url: {login_url}") # Debugging line
+        #             try:
+        #                 login_response = await client.post(
+        #                     login_url,
+        #                     data={"username": credentials.username, "password": credentials.password},
+        #                     headers={"Content-Type": "application/x-www-form-urlencoded"},
+        #                     follow_redirects=False # Don't follow 303
+        #                 )
+        #                 
+        #                 # Don't raise for status here since 303 is expected and not an error
+        #                 # Instead, check if it's either 200 or 303 (both are valid success responses)
+        #                 if login_response.status_code not in [200, 303]:
+        #                     login_response.raise_for_status()  # Will raise for other error codes
+        #                 
+        #                 # Log status for debugging
+        #                 logger.debug(f"Login response status: {login_response.status_code}")
+        #                 
+        #                 # Extract cookie - check common session cookie names
+        #                 cookie_value = login_response.cookies.get("mcp_gateway_session")
+        #                 
+        #                 # Also check response headers for Set-Cookie if not found in cookies
+        #                 if not cookie_value and 'set-cookie' in login_response.headers:
+        #                     cookie_header = login_response.headers['set-cookie']
+        #                     logger.debug(f"Found Set-Cookie header: {cookie_header}")
+        #                     # Try to extract session cookie from header
+        #                     if 'mcp_gateway_session=' in cookie_header:
+        #                         cookie_parts = cookie_header.split('mcp_gateway_session=')[1].split(';')[0]
+        #                         cookie_value = cookie_parts.strip()
+        #                         logger.debug(f"Extracted cookie from header: {cookie_value}")
 
-        # --- Authentication Check ---
-        if _session_cookie is None:
-            async with _auth_lock:
-                # Double-check after acquiring the lock in case another coroutine finished auth
-                if _session_cookie is None:
-                    logger.info("No active session cookie. Attempting to authenticate with the registry...")
-                    login_url = f"{REGISTRY_BASE_URL.rstrip('/')}/login"
-                    logger.debug(f"login_url: {login_url}") # Debugging line
-                    try:
-                        login_response = await client.post(
-                            login_url,
-                            data={"username": credentials.username, "password": credentials.password},
-                            headers={"Content-Type": "application/x-www-form-urlencoded"},
-                            follow_redirects=False # Don't follow 303
-                        )
-                        
-                        # Don't raise for status here since 303 is expected and not an error
-                        # Instead, check if it's either 200 or 303 (both are valid success responses)
-                        if login_response.status_code not in [200, 303]:
-                            login_response.raise_for_status()  # Will raise for other error codes
-                        
-                        # Log status for debugging
-                        logger.debug(f"Login response status: {login_response.status_code}")
-                        
-                        # Extract cookie - check common session cookie names
-                        cookie_value = login_response.cookies.get("mcp_gateway_session")
-                        
-                        # Also check response headers for Set-Cookie if not found in cookies
-                        if not cookie_value and 'set-cookie' in login_response.headers:
-                            cookie_header = login_response.headers['set-cookie']
-                            logger.debug(f"Found Set-Cookie header: {cookie_header}")
-                            # Try to extract session cookie from header
-                            if 'mcp_gateway_session=' in cookie_header:
-                                cookie_parts = cookie_header.split('mcp_gateway_session=')[1].split(';')[0]
-                                cookie_value = cookie_parts.strip()
-                                logger.debug(f"Extracted cookie from header: {cookie_value}")
+        #                 if cookie_value:
+        #                     _session_cookie = cookie_value
+        #                     logger.info("Authentication successful. Session cookie obtained.")
+        #                 else:
+        #                     # Log the response headers and body for debugging if cookie is missing
+        #                     logger.debug(f"Login response headers: {login_response.headers}")
+        #                     logger.debug(f"Login response status: {login_response.status_code}")
+        #                     try:
+        #                         logger.debug(f"Login response body: {login_response.text[:100]}...")  # First 100 chars
+        #                     except Exception:
+        #                         logger.error("Could not read response body")
+        #                     
+        #                     # If it's a redirect, you might need to handle it manually
+        #                     if login_response.status_code in (301, 302, 303, 307, 308):
+        #                         redirect_url = login_response.headers.get("Location")
+        #                         logger.debug(f"Got redirect to: {redirect_url}")
+        #                         
+        #                         # Optional: Follow the redirect manually to get the cookie
+        #                         try:
+        #                             logger.debug(f"Manually following redirect to {redirect_url}")
+        #                             redirect_response = await client.get(
+        #                                 redirect_url,
+        #                                 follow_redirects=False
+        #                             )
+        #                             logger.debug(f"Redirect response status: {redirect_response.status_code}")
+        #                             
+        #                             # Check for cookie in redirect response
+        #                             cookie_value = redirect_response.cookies.get("mcp_gateway_session")
+        #                             if cookie_value:
+        #                                 _session_cookie = cookie_value
+        #                                 logger.info("Authentication successful after redirect. Session cookie obtained.")
+        #                             else:
+        #                                 logger.debug(f"Redirect response headers: {redirect_response.headers}")
+        #                                 logger.warning("Still no session cookie after redirect.")
+        #                         except Exception as e:
+        #                             logger.error(f"Error following redirect: {e}")
+        #                     
+        #                     if _session_cookie is None:
+        #                         logger.error("Authentication failed: 'mcp_gateway_session' cookie not found in response.")
+        #                         raise Exception("Authentication failed: Session cookie not found.")
 
-                        if cookie_value:
-                            _session_cookie = cookie_value
-                            logger.info("Authentication successful. Session cookie obtained.")
-                        else:
-                            # Log the response headers and body for debugging if cookie is missing
-                            logger.debug(f"Login response headers: {login_response.headers}")
-                            logger.debug(f"Login response status: {login_response.status_code}")
-                            try:
-                                logger.debug(f"Login response body: {login_response.text[:100]}...")  # First 100 chars
-                            except Exception:
-                                logger.error("Could not read response body")
-                            
-                            # If it's a redirect, you might need to handle it manually
-                            if login_response.status_code in (301, 302, 303, 307, 308):
-                                redirect_url = login_response.headers.get("Location")
-                                logger.debug(f"Got redirect to: {redirect_url}")
-                                
-                                # Optional: Follow the redirect manually to get the cookie
-                                try:
-                                    logger.debug(f"Manually following redirect to {redirect_url}")
-                                    redirect_response = await client.get(
-                                        redirect_url,
-                                        follow_redirects=False
-                                    )
-                                    logger.debug(f"Redirect response status: {redirect_response.status_code}")
-                                    
-                                    # Check for cookie in redirect response
-                                    cookie_value = redirect_response.cookies.get("mcp_gateway_session")
-                                    if cookie_value:
-                                        _session_cookie = cookie_value
-                                        logger.info("Authentication successful after redirect. Session cookie obtained.")
-                                    else:
-                                        logger.debug(f"Redirect response headers: {redirect_response.headers}")
-                                        logger.warning("Still no session cookie after redirect.")
-                                except Exception as e:
-                                    logger.error(f"Error following redirect: {e}")
-                            
-                            if _session_cookie is None:
-                                logger.error("Authentication failed: 'mcp_gateway_session' cookie not found in response.")
-                                raise Exception("Authentication failed: Session cookie not found.")
+        #             except httpx.HTTPStatusError as e:
+        #                  # Provide more context on login failure
+        #                  error_detail = f"HTTP Status {e.response.status_code}"
+        #                  try:
+        #                      # Try to get detail from JSON response if available
+        #                      error_detail += f" - Detail: {e.response.json().get('detail', 'N/A')}"
+        #                  except Exception:
+        #                      pass # Ignore if response is not JSON
+        #                  logger.error(f"Authentication failed: {error_detail}")
+        #                  raise Exception(f"Authentication failed: {error_detail}") from e
+        #             except httpx.RequestError as e:
+        #                  logger.error(f"Authentication failed: Could not connect to registry at {login_url}. Error: {e}")
+        #                  raise Exception(f"Authentication failed: Request Error {e}") from e
+        #             except Exception as e: # Catch unexpected errors during login
+        #                  logger.error(f"An unexpected error occurred during authentication: {e}")
+        #                  raise Exception(f"An unexpected error occurred during authentication: {e}") from e
 
-                    except httpx.HTTPStatusError as e:
-                         # Provide more context on login failure
-                         error_detail = f"HTTP Status {e.response.status_code}"
-                         try:
-                             # Try to get detail from JSON response if available
-                             error_detail += f" - Detail: {e.response.json().get('detail', 'N/A')}"
-                         except Exception:
-                             pass # Ignore if response is not JSON
-                         logger.error(f"Authentication failed: {error_detail}")
-                         raise Exception(f"Authentication failed: {error_detail}") from e
-                    except httpx.RequestError as e:
-                         logger.error(f"Authentication failed: Could not connect to registry at {login_url}. Error: {e}")
-                         raise Exception(f"Authentication failed: Request Error {e}") from e
-                    except Exception as e: # Catch unexpected errors during login
-                         logger.error(f"An unexpected error occurred during authentication: {e}")
-                         raise Exception(f"An unexpected error occurred during authentication: {e}") from e
-
-        # If still no cookie after attempting auth, something went wrong.
-        if _session_cookie is None:
-             raise Exception("Unable to proceed: Not authenticated with the registry.")
+        # # If still no cookie after attempting auth, something went wrong.
+        # if _session_cookie is None:
+        #      raise Exception("Unable to proceed: Not authenticated with the registry.")
 
         # --- Make the actual API request with the cookie ---
         request_cookies = {"mcp_gateway_session": _session_cookie}
@@ -451,6 +596,158 @@ async def healthcheck() -> Dict[str, Any]:
     except Exception as e:
         logger.error(f"Unexpected error retrieving health status: {e}")
         raise Exception(f"Unexpected error retrieving health status: {e}")
+
+
+@mcp.tool()
+async def find_intelligent_tool(
+    natural_language_query: str = Field(..., description="Your query in natural language describing the task you want to perform."),
+    username: str = Field(..., description="Username for mcpgw server authentication (if configured for this tool). Currently informational."),
+    password: str = Field(..., description="Password for mcpgw server authentication (if configured for this tool). Currently informational."),
+    top_k_services: int = Field(3, description="Number of top services to consider from initial FAISS search."),
+    top_n_tools: int = Field(1, description="Number of best matching tools to return.")
+) -> List[Dict[str, Any]]:
+    """
+    Finds the most relevant MCP tool(s) across all registered and enabled services 
+    based on a natural language query, using semantic search on the registry's FAISS index.
+
+    Args:
+        natural_language_query: The user's natural language query.
+        username: Username for authentication (currently informational for this specific tool's internal logic).
+        password: Password for authentication (currently informational for this specific tool's internal logic).
+        top_k_services: How many top-matching services to analyze for tools.
+        top_n_tools: How many best tools to return from the combined list.
+
+    Returns:
+        A list of dictionaries, each describing a recommended tool, its parent service, and similarity.
+    """
+    global _embedding_model_mcpgw, _faiss_index_mcpgw, _faiss_metadata_mcpgw
+
+    # --- Ensure authenticated session with main registry --- START
+    auth_credentials = Credentials(username=username, password=password)
+    await _ensure_authenticated(auth_credentials)
+    # --- Ensure authenticated session with main registry --- END
+
+    # Ensure FAISS data and model are loaded
+    if _embedding_model_mcpgw is None or _faiss_index_mcpgw is None or _faiss_metadata_mcpgw is None:
+        logger.info("MCPGW: FAISS data or model not yet loaded. Attempting to load now for find_intelligent_tool...")
+        await load_faiss_data_for_mcpgw()
+
+    if _embedding_model_mcpgw is None:
+        raise Exception("MCPGW: Sentence embedding model is not available. Cannot perform intelligent search.")
+    if _faiss_index_mcpgw is None:
+        raise Exception("MCPGW: FAISS index is not available. Cannot perform intelligent search.")
+    if _faiss_metadata_mcpgw is None or "metadata" not in _faiss_metadata_mcpgw:
+        raise Exception("MCPGW: FAISS metadata is not available or in unexpected format. Cannot perform intelligent search.")
+
+    registry_faiss_metadata = _faiss_metadata_mcpgw["metadata"] # This is {service_path: {id, text, full_server_info}}
+
+    # 1. Embed the natural language query
+    try:
+        query_embedding = await asyncio.to_thread(_embedding_model_mcpgw.encode, [natural_language_query])
+        query_embedding_np = np.array(query_embedding, dtype=np.float32)
+    except Exception as e:
+        logger.error(f"MCPGW: Error encoding natural language query: {e}", exc_info=True)
+        raise Exception(f"MCPGW: Error encoding query: {e}")
+
+    # 2. Search FAISS for top_k_services
+    # The FAISS index in registry/main.py stores SERVICE embeddings.
+    try:
+        logger.info(f"MCPGW: Searching FAISS index for top {top_k_services} services matching query.")
+        distances, faiss_ids = await asyncio.to_thread(_faiss_index_mcpgw.search, query_embedding_np, top_k_services)
+    except Exception as e:
+        logger.error(f"MCPGW: Error searching FAISS index: {e}", exc_info=True)
+        raise Exception(f"MCPGW: Error searching FAISS index: {e}")
+
+    candidate_tools = []
+    
+    # Create a reverse map from FAISS internal ID to service_path for quick lookup
+    id_to_service_path_map = {}
+    for Svc_path, meta_item in registry_faiss_metadata.items():
+        if "id" in meta_item:
+            id_to_service_path_map[meta_item["id"]] = Svc_path
+        else:
+            logger.warning(f"MCPGW: Metadata for service {Svc_path} missing 'id' field. Skipping.")
+
+
+    # 3. Filter and Collect Tools from top services
+    logger.info(f"MCPGW: Processing {len(faiss_ids[0])} services from FAISS search results.")
+    for i in range(len(faiss_ids[0])):
+        faiss_id = faiss_ids[0][i]
+        if faiss_id == -1: # FAISS uses -1 for no more results or if k > ntotal
+            continue
+
+        service_path = id_to_service_path_map.get(faiss_id)
+        if not service_path:
+            logger.warning(f"MCPGW: Could not find service_path for FAISS ID {faiss_id}. Skipping.")
+            continue
+            
+        service_metadata = registry_faiss_metadata.get(service_path)
+        if not service_metadata or "full_server_info" not in service_metadata:
+            logger.warning(f"MCPGW: Metadata or full_server_info not found for service path {service_path}. Skipping.")
+            continue
+            
+        full_server_info = service_metadata["full_server_info"]
+
+        if not full_server_info.get("is_enabled", False):
+            logger.info(f"MCPGW: Service {service_path} is disabled. Skipping its tools.")
+            continue
+
+        service_name = full_server_info.get("server_name", "Unknown Service")
+        tool_list = full_server_info.get("tool_list", [])
+
+        for tool_info in tool_list:
+            tool_name = tool_info.get("name", "Unknown Tool")
+            parsed_desc = tool_info.get("parsed_description", {})
+            main_desc = parsed_desc.get("main", "No description.")
+            
+            # Create descriptive text for this specific tool
+            tool_text_for_embedding = f"Service: {service_name}. Tool: {tool_name}. Description: {main_desc}"
+            
+            candidate_tools.append({
+                "text_for_embedding": tool_text_for_embedding,
+                "tool_name": tool_name,
+                "tool_parsed_description": parsed_desc,
+                "tool_schema": tool_info.get("schema", {}),
+                "service_path": service_path,
+                "service_name": service_name,
+            })
+
+    if not candidate_tools:
+        logger.info("MCPGW: No enabled tools found in the top services from FAISS search.")
+        return []
+
+    # 4. Embed all candidate tool descriptions
+    logger.info(f"MCPGW: Embedding {len(candidate_tools)} candidate tools for secondary ranking.")
+    try:
+        tool_texts = [tool["text_for_embedding"] for tool in candidate_tools]
+        tool_embeddings = await asyncio.to_thread(_embedding_model_mcpgw.encode, tool_texts)
+        tool_embeddings_np = np.array(tool_embeddings, dtype=np.float32)
+    except Exception as e:
+        logger.error(f"MCPGW: Error encoding tool descriptions: {e}", exc_info=True)
+        raise Exception(f"MCPGW: Error encoding tool descriptions: {e}")
+
+    # 5. Calculate cosine similarity between query and each tool embedding
+    similarities = cosine_similarity(query_embedding_np, tool_embeddings_np)[0] # Get the first row (query vs all tools)
+
+    # 6. Add similarity score to each tool and sort
+    ranked_tools = []
+    for i, tool_data in enumerate(candidate_tools):
+        ranked_tools.append({
+            **tool_data,
+            "overall_similarity_score": float(similarities[i])
+        })
+    
+    ranked_tools.sort(key=lambda x: x["overall_similarity_score"], reverse=True)
+
+    # 7. Select top N tools
+    final_results = ranked_tools[:top_n_tools]
+    logger.info(f"MCPGW: Top {len(final_results)} tools found: {json.dumps(final_results, indent=2)}")
+    
+    # Remove the temporary 'text_for_embedding' field from results
+    for res in final_results:
+        del res["text_for_embedding"]
+        
+    return final_results
 
 
 # --- Main Execution ---

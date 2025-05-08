@@ -265,4 +265,3 @@ Ready to move beyond the chaos of scattered MCP servers and embrace a more organ
 *   **Connect:** Join our community of AI practitioners who are building the future of AI tool integration.
 
 Stop wrestling with complexity and start leveraging the power of a unified MCP landscape with the MCP Gateway & Registry. Your AI infrastructure deserves this level of organization and control.
-
