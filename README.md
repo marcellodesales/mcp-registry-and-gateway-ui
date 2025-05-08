@@ -11,6 +11,7 @@
 
 [Model Context Protocol (MCP)](https://modelcontextprotocol.io/introduction) is an open standard protocol that allows AI Models to connect with external systems, tools, and data sources. A common problem that enterprises face while using MCP servers is that there is a need for a central point of access to a curated list of MCP servers and a catalog of such servers. This is the precise problem that this application provides a solution for by implementing an **MCP Gateway & Registry**. 
 
+**<u>Demo Video</u>**: [https://www.youtube.com/watch?v=o_Wich7AChk](https://www.youtube.com/watch?v=o_Wich7AChk)
 
 ## Architecture
 
@@ -124,7 +125,7 @@ flowchart TB
 
 ## Prerequisites
 
-*   An Amazon EC2 machine for running this solution.
+*   An Amazon EC2 machine with a standard Ubuntu AMI for running this solution.
 *   An SSL cert for securing the communication to the Gateway. _This Gateway uses a self-signed cert by default and is also available over HTTP_. 
 *   One of the example MCP servers packaged in this repo uses the [`Polygon`](https://polygon.io/stocks) API for stock ticker data. Get an API key from [here](https://polygon.io/dashboard/signup?redirect=%2Fdashboard%2Fkeys). The server will still start without the API key but you will get a 401 Unauthorized error when using the tools provided by this server.
 
@@ -197,7 +198,16 @@ The Gateway and the Registry are available as a Docker container. The package in
 
 1. **Navigate to [`http://localhost:7860`](http://localhost:7860) access the Registry**
 
-    ![MCP Registry](./img/registry.png)
+    ![MCP Registry](docs/img/registry.png)
+
+1. **View logs from the Registry and the built-in MCP servers:**
+   Logs are available on the local machine in the `/var/log/mcp-gateway` directory.
+   ```
+   tail -f /var/log/mcp-gateway/*
+   ```
+
+1. **View MCP server metadata:**
+   Metadata about all MCP servers connected to the Registry is available in `/opt/mcp-gateway/servers` directory. The metadata includes information gathered from `ListTools` as well as information provided while registering the server.
 
 ### Running the Gateway over HTTPS
 
@@ -225,12 +235,35 @@ The Gateway and the Registry are available as a Docker container. The package in
 ## Usage
 
 1.  **Login:** Use the `ADMIN_USER` and `ADMIN_PASSWORD` specified while starting the Gateway container.
-3.  **Manage Services:**
+1.  **Manage Services:**
     *   Toggle the Enabled/Disabled switch. The Nginx config automatically comments/uncomments the relevant `location` block.
     *   Click "Modify" to edit service details.
     *   Click the refresh icon (🔄) in the card header to manually trigger a health check and tool list update for enabled services.
-4.  **View Tools:** Click the tool count icon (🔧) in the card footer to open a modal displaying discovered tools and their schemas for healthy services.
-5.  **Filter:** Use the sidebar links to filter the displayed services.
+1.  **View Tools:** Click the tool count icon (🔧) in the card footer to open a modal displaying discovered tools and their schemas for healthy services.
+1.  **Filter:** Use the sidebar links to filter the displayed services.
+
+### Interact with the MCP Registry via its own built-in MCP server!
+
+The MCP Registry provides an [API](#api-endpoints-brief-overview), this API is also exposed as an MCP server so we have an MCP Server to manage the MCP Registry itself. You can use any MCP Host such as [`Cursor`](https://www.cursor.com/) or others that support remote MCP Servers over SSE. To add the MCP Registry's MCP server to Cursor, simply add the following JSON to Cursor's `mcp.json` file.
+
+>Using the MCP Gateway in Agents and hosts such as Cursor does require that you run the Gateway over HTTPS, see instructions [here](#running-the-gateway-over-https).
+
+```json
+{
+  "mcpServers": {
+    "mcpgw": {
+      "url": "https://mymcpgateway.mycorp.com//mcpgw/sse"
+    }
+  }
+}
+```
+
+Cursor should now be able to talk to the MCP Gateway and you should be able to use the tools it provides.
+
+![Cursor MCP server](./docs/img/cursor-mcp-server.png)
+
+**To add more MCP servers provided by the Gateway to Cursor and other tools we would need to wait for this [PR 597](https://github.com/modelcontextprotocol/python-sdk/pull/597) on the MCP Python SDK to be merged into the SDK. Please add a +1 to the PR to make sure it makes it into the May 2025 release of the MCP Python SDK**.
+
 
 ### Steps to add a new MCP server to the Gateway and Registry
 
