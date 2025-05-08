@@ -138,6 +138,7 @@ def load_faiss_data():
     logger.info("Loading FAISS data and embedding model...")
 
     SERVERS_DIR.mkdir(parents=True, exist_ok=True)
+    
 
     try:
         model_cache_path = CONTAINER_REGISTRY_DIR / ".cache" 
