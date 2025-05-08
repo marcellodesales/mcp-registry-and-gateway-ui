@@ -30,7 +30,8 @@ COPY . /app/
 RUN uv venv /app/.venv --python 3.12
 
 # Install Python dependencies from pyproject.toml INTO the shared venv
-RUN . /app/.venv/bin/activate && uv pip install --no-cache-dir /app
+RUN . /app/.venv/bin/activate && uv pip install --no-cache-dir /app 
+
 
 # Generate self-signed SSL certificate for Nginx
 # Create directories for SSL certs
