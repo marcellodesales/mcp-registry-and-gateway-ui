@@ -60,7 +60,7 @@ async def run(server_url, args):
             tz_name = "Africa/Cairo"
             logger.info(f"\nCalling current_time_by_timezone tool with tz_name={tz_name}")
             result = await session.call_tool(
-                "current_time_by_timezone", arguments={"params": {"tz_name": tz_name}}
+                "current_time_by_timezone", arguments={"tz_name": tz_name}
             )
 
             # Display the results
@@ -81,7 +81,12 @@ if __name__ == "__main__":
         "--host", type=str, default="localhost", help="Hostname of the MCP server"
     )
     parser.add_argument("--port", type=int, default=8000, help="Port of the MCP server")
-
+    parser.add_argument(
+        "--server-name",
+        type=str,
+        default="currenttime", # Default server name changed
+        help='Name of the MCP server to connect to (e.g., "mcpgw")',
+    )
     # Parse the arguments
     args = parser.parse_args()
 
@@ -91,7 +96,7 @@ if __name__ == "__main__":
     # Automatically turn to https if port is 443
     if args.port == 443:
         secure = "s"
-    server_url = f"http{secure}://{args.host}:{args.port}/sse"
+    server_url = f"http{secure}://{args.host}:{args.port}/{args.server_name}/sse"
 
     # Run the async main function
     import asyncio

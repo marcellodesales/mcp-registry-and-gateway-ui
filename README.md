@@ -264,7 +264,7 @@ Cursor should now be able to talk to the MCP Gateway and you should be able to u
 
 ### Steps to add a new MCP server to the Gateway and Registry
 
-1. Option 1 (_recommended_): Use `Cursor` or your favorite MCP host of choice that supports SSE to add the MCP Gateway as a server as an MCP server and then simple ask it in naturla language to register a new MCP server and follow the prompts.
+1. Option 1 (_recommended_): Use `Cursor` or your favorite MCP host of choice that supports SSE to add the MCP Gateway as a server as an MCP server and then simple ask it in natural language to register a new MCP server and follow the prompts.
 
 1. Option 2: Use `/register` API (first call the `/login` API and get the secure cookie value), see steps in the [API endpoints](#api-endpoints-brief-overview) section. Note the value for the `mcp_gateway_session` cookie from the `/login` API and then use it in `/register` API.
     ```bash

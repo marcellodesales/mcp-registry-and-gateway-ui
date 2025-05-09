@@ -3,10 +3,10 @@
 # Get the absolute path of the directory where this script is run from
 SCRIPT_DIR="$(pwd)"
 
-# Set the base directory, logs directory, and starting port
+# Set the base directory, logs directory, and registry directory
 SERVERS_DIR="$SCRIPT_DIR/servers"
 LOGS_DIR="$SCRIPT_DIR/logs"
-PORT_START=8001
+REGISTRY_DIR="$SCRIPT_DIR/registry/servers"
 
 # Check if servers directory exists
 if [ ! -d "$SERVERS_DIR" ]; then
@@ -33,13 +33,32 @@ source "$SCRIPT_DIR/.venv/bin/activate"
 # Find all subdirectories in the servers directory
 subdirs=$(find "$SERVERS_DIR" -mindepth 1 -maxdepth 1 -type d | sort)
 
-# Counter for port numbers
-port=$PORT_START
-
 # Process each subdirectory
 for subdir in $subdirs; do
     # Extract the server name from the path
     server_name=$(basename "$subdir")
+    
+    # Find the corresponding JSON file
+    json_file="$REGISTRY_DIR/${server_name}.json"
+    
+    # Default port is 80
+    port=80
+    
+    # Check if JSON file exists
+    if [ -f "$json_file" ]; then
+        # Extract proxy_pass_url from the JSON file
+        proxy_pass_url=$(grep -o '"proxy_pass_url": *"[^"]*"' "$json_file" | sed 's/"proxy_pass_url": *"\([^"]*\)"/\1/')
+        
+        # Check if proxy_pass_url contains a port number
+        if [[ $proxy_pass_url =~ :[0-9]+/ ]]; then
+            # Extract the port number
+            port=$(echo "$proxy_pass_url" | sed -E 's/.*:([0-9]+)\/.*/\1/')
+        elif [[ $proxy_pass_url == https://* ]]; then
+            # If URL is HTTPS and no port specified, use 443
+            port=443
+        fi
+    fi
+    
     echo "Processing directory: $subdir (port: $port, server: $server_name)"
     
     # Create log file paths with absolute paths
@@ -68,8 +87,7 @@ for subdir in $subdirs; do
     # Return to the original directory
     cd "$SCRIPT_DIR"
     
-    # Increment the port number for the next server
-    ((port++))
+    # No need to increment port as we're reading it from the JSON file
     
     echo "-----------------------------------"
 done
