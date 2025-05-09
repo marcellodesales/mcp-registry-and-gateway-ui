@@ -52,9 +52,9 @@ for subdir in $subdirs; do
     # Python environment setup is now global, so no local venv creation/activation needed here
     
     echo "Starting server on port $port (logs in $log_file)..."
-    # Start the server in the background with the current port and redirect output to log file
-    # uv run will use the globally activated venv
-    uv run python server.py --port $port >> "$log_file" 2>&1 &
+    # Start the server in the background with the current port and redirect output to log file    
+    uv venv --python 3.12 && source .venv/bin/activate && uv pip install --requirement pyproject.toml
+    uv run  python server.py --port $port >> "$log_file" 2>&1 &
     
     # Store the process ID for potential cleanup later
     server_pid=$!

@@ -2,9 +2,13 @@
 set -e # Exit immediately if a command exits with a non-zero status.
 
 # --- Configuration ---
+# Get the absolute path of the directory where this script is run from
+SCRIPT_DIR="$(pwd)"
 REGISTRY_ENV_FILE="/app/registry/.env"
 FININFO_ENV_FILE="/app/servers/fininfo/.env"
 REGISTRY_ENV_TEMPLATE="/app/registry/.env.template"
+EMBEDDINGS_MODEL_NAME="all-MiniLM-L6-v2"
+EMBEDDINGS_MODEL_DIMENSIONS=384
 FININFO_ENV_TEMPLATE="/app/servers/fininfo/.env.template"
 NGINX_CONF_SRC="/app/docker/nginx_rev_proxy.conf"
 NGINX_CONF_DEST="/etc/nginx/conf.d/nginx_rev_proxy.conf"
@@ -46,6 +50,8 @@ cp "$NGINX_CONF_SRC" "$NGINX_CONF_DEST"
 echo "Nginx configuration copied to $NGINX_CONF_DEST."
 
 # --- Start Background Services ---
+export EMBEDDINGS_MODEL_NAME=$EMBEDDINGS_MODEL_NAME
+export EMBEDDINGS_MODEL_DIMENSIONS=$EMBEDDINGS_MODEL_DIMENSIONS 
 
 # 1. Start Example MCP Servers
 echo "Starting example MCP servers in the background..."
@@ -62,7 +68,8 @@ cd /app/registry
 # Use uv run to start uvicorn, ensuring it uses the correct environment
 # Run on 0.0.0.0 to be accessible within the container network
 # Use port 7860 as configured in nginx proxy_pass
-sudo uv run uvicorn main:app --host 0.0.0.0 --port 7860 &
+source "$SCRIPT_DIR/.venv/bin/activate"
+cd /app/registry && uvicorn main:app --host 0.0.0.0 --port 7860 &
 echo "MCP Registry start command issued."
 # Give registry a moment to initialize and generate initial nginx config
 sleep 10

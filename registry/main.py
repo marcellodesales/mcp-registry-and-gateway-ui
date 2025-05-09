@@ -3,6 +3,7 @@ import json
 import secrets
 import asyncio
 import subprocess
+# argparse removed as we're using environment variables instead
 from contextlib import asynccontextmanager
 from pathlib import Path  # Import Path
 from typing import Annotated, List, Set
@@ -11,6 +12,10 @@ from datetime import datetime, timezone
 import faiss
 import numpy as np
 from sentence_transformers import SentenceTransformer
+
+# Get configuration from environment variables
+EMBEDDINGS_MODEL_NAME = os.environ.get('EMBEDDINGS_MODEL_NAME', 'all-MiniLM-L6-v2')
+EMBEDDINGS_MODEL_DIMENSIONS = int(os.environ.get('EMBEDDINGS_MODEL_DIMENSIONS', '384'))
 
 from fastapi import (
     FastAPI,
@@ -39,6 +44,7 @@ from mcp.client.sse import sse_client
 CONTAINER_APP_DIR = Path("/app")
 CONTAINER_REGISTRY_DIR = CONTAINER_APP_DIR / "registry"
 CONTAINER_LOG_DIR = CONTAINER_APP_DIR / "logs"
+EMBEDDINGS_MODEL_DIR = CONTAINER_REGISTRY_DIR / "models" / EMBEDDINGS_MODEL_NAME
 # --- Define paths based on container structure --- END
 
 # Determine the base directory of this script (registry folder)
@@ -75,7 +81,9 @@ LOG_FILE_PATH = CONTAINER_LOG_DIR / "registry.log"
 # --- FAISS Vector DB Configuration --- START
 FAISS_INDEX_PATH = SERVERS_DIR / "service_index.faiss"
 FAISS_METADATA_PATH = SERVERS_DIR / "service_index_metadata.json"
-EMBEDDING_DIMENSION = 384  # For all-MiniLM-L6-v2
+EMBEDDING_MODEL_DIMENSION = EMBEDDINGS_MODEL_DIMENSIONS  # Use env var, default is 384 for all-MiniLM-L6-v2
+# EMBEDDINGS_MODEL_NAME is already defined above
+EMBEDDINGS_MODEL_PATH = EMBEDDINGS_MODEL_DIR  # Path derived from model name
 embedding_model = None # Will be loaded in lifespan
 faiss_index = None     # Will be loaded/created in lifespan
 # Stores: { service_path: {"id": faiss_internal_id, "text_for_embedding": "...", "full_server_info": { ... }} }
@@ -141,16 +149,23 @@ def load_faiss_data():
     
 
     try:
-        model_cache_path = CONTAINER_REGISTRY_DIR / ".cache" 
+        model_cache_path = CONTAINER_REGISTRY_DIR / ".cache"
         model_cache_path.mkdir(parents=True, exist_ok=True)
+        
         # Set SENTENCE_TRANSFORMERS_HOME to use the defined cache path
-        # This needs to be set before SentenceTransformer is imported or used if we want to control the cache location this way.
-        # However, setting it here is fine as it's done before the model is instantiated.
         original_st_home = os.environ.get('SENTENCE_TRANSFORMERS_HOME')
         os.environ['SENTENCE_TRANSFORMERS_HOME'] = str(model_cache_path)
-        logger.info(f"Attempting to load SentenceTransformer model 'all-MiniLM-L6-v2'. Cache: {model_cache_path}")
         
-        embedding_model = SentenceTransformer('all-MiniLM-L6-v2')
+        # Check if the model path exists and is not empty
+        model_path = Path(EMBEDDINGS_MODEL_PATH)
+        model_exists = model_path.exists() and any(model_path.iterdir()) if model_path.exists() else False
+        
+        if model_exists:
+            logger.info(f"Loading SentenceTransformer model from local path: {EMBEDDINGS_MODEL_PATH}")
+            embedding_model = SentenceTransformer(str(EMBEDDINGS_MODEL_PATH))
+        else:
+            logger.info(f"Local model not found at {EMBEDDINGS_MODEL_PATH}, downloading from Hugging Face")
+            embedding_model = SentenceTransformer(str(EMBEDDINGS_MODEL_NAME))
         
         # Restore original environment variable if it was set
         if original_st_home:
@@ -158,7 +173,7 @@ def load_faiss_data():
         else:
             del os.environ['SENTENCE_TRANSFORMERS_HOME'] # Remove if not originally set
             
-        logger.info("SentenceTransformer model 'all-MiniLM-L6-v2' loaded successfully.")
+        logger.info("SentenceTransformer model loaded successfully.")
     except Exception as e:
         logger.error(f"Failed to load SentenceTransformer model: {e}", exc_info=True)
         embedding_model = None 
@@ -173,19 +188,19 @@ def load_faiss_data():
                 faiss_metadata_store = loaded_metadata.get("metadata", {})
                 next_faiss_id_counter = loaded_metadata.get("next_id", 0)
             logger.info(f"FAISS data loaded. Index size: {faiss_index.ntotal if faiss_index else 0}. Next ID: {next_faiss_id_counter}")
-            if faiss_index and faiss_index.d != EMBEDDING_DIMENSION:
-                logger.warning(f"Loaded FAISS index dimension ({faiss_index.d}) differs from expected ({EMBEDDING_DIMENSION}). Re-initializing.")
-                faiss_index = faiss.IndexIDMap(faiss.IndexFlatL2(EMBEDDING_DIMENSION))
+            if faiss_index and faiss_index.d != EMBEDDING_MODEL_DIMENSION:
+                logger.warning(f"Loaded FAISS index dimension ({faiss_index.d}) differs from expected ({EMBEDDING_MODEL_DIMENSION}). Re-initializing.")
+                faiss_index = faiss.IndexIDMap(faiss.IndexFlatL2(EMBEDDING_MODEL_DIMENSION))
                 faiss_metadata_store = {}
                 next_faiss_id_counter = 0
         except Exception as e:
             logger.error(f"Error loading FAISS data: {e}. Re-initializing.", exc_info=True)
-            faiss_index = faiss.IndexIDMap(faiss.IndexFlatL2(EMBEDDING_DIMENSION))
+            faiss_index = faiss.IndexIDMap(faiss.IndexFlatL2(EMBEDDING_MODEL_DIMENSION))
             faiss_metadata_store = {}
             next_faiss_id_counter = 0
     else:
         logger.info("FAISS index or metadata not found. Initializing new.")
-        faiss_index = faiss.IndexIDMap(faiss.IndexFlatL2(EMBEDDING_DIMENSION))
+        faiss_index = faiss.IndexIDMap(faiss.IndexFlatL2(EMBEDDING_MODEL_DIMENSION))
         faiss_metadata_store = {}
         next_faiss_id_counter = 0
 

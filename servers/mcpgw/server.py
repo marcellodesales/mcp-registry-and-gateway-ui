@@ -14,6 +14,7 @@ from pydantic import BaseModel, Field
 from mcp.server.fastmcp import FastMCP
 from typing import Dict, Any, Optional, ClassVar, List
 from dotenv import load_dotenv
+import os
 from sentence_transformers import SentenceTransformer # Added
 import numpy as np # Added
 from sklearn.metrics.pairwise import cosine_similarity # Added
@@ -55,6 +56,10 @@ FAISS_INDEX_PATH_MCPGW = _registry_server_data_path / "service_index.faiss"
 FAISS_METADATA_PATH_MCPGW = _registry_server_data_path / "service_index_metadata.json"
 EMBEDDING_DIMENSION_MCPGW = 384 # Should match the one used in main registry
 
+# Get configuration from environment variables
+EMBEDDINGS_MODEL_NAME = os.environ.get('EMBEDDINGS_MODEL_NAME', 'all-MiniLM-L6-v2')
+EMBEDDINGS_MODEL_DIR = _registry_server_data_path.parent / "models" / EMBEDDINGS_MODEL_NAME
+
 async def load_faiss_data_for_mcpgw():
     """Loads the FAISS index, metadata, and embedding model for the mcpgw server.
        Reloads data if underlying files have changed since last load.
@@ -66,9 +71,31 @@ async def load_faiss_data_for_mcpgw():
         # Load embedding model if not already loaded (model doesn't change on disk typically)
         if _embedding_model_mcpgw is None:
             try:
-                logger.info("MCPGW: Loading SentenceTransformer model 'all-MiniLM-L6-v2'...")
-                _embedding_model_mcpgw = await asyncio.to_thread(SentenceTransformer, 'all-MiniLM-L6-v2')
-                logger.info("MCPGW: SentenceTransformer model loaded.")
+                model_cache_path = _registry_server_data_path.parent / ".cache"
+                model_cache_path.mkdir(parents=True, exist_ok=True)
+                
+                # Set SENTENCE_TRANSFORMERS_HOME to use the defined cache path
+                original_st_home = os.environ.get('SENTENCE_TRANSFORMERS_HOME')
+                os.environ['SENTENCE_TRANSFORMERS_HOME'] = str(model_cache_path)
+                
+                # Check if the model path exists and is not empty
+                model_path = Path(EMBEDDINGS_MODEL_DIR)
+                model_exists = model_path.exists() and any(model_path.iterdir()) if model_path.exists() else False
+                
+                if model_exists:
+                    logger.info(f"MCPGW: Loading SentenceTransformer model from local path: {EMBEDDINGS_MODEL_DIR}")
+                    _embedding_model_mcpgw = await asyncio.to_thread(SentenceTransformer, str(EMBEDDINGS_MODEL_DIR))
+                else:
+                    logger.info(f"MCPGW: Local model not found at {EMBEDDINGS_MODEL_DIR}, downloading from Hugging Face")
+                    _embedding_model_mcpgw = await asyncio.to_thread(SentenceTransformer, str(EMBEDDINGS_MODEL_NAME))
+                
+                # Restore original environment variable if it was set
+                if original_st_home:
+                    os.environ['SENTENCE_TRANSFORMERS_HOME'] = original_st_home
+                else:
+                    del os.environ['SENTENCE_TRANSFORMERS_HOME'] # Remove if not originally set
+                    
+                logger.info("MCPGW: SentenceTransformer model loaded successfully.")
             except Exception as e:
                 logger.error(f"MCPGW: Failed to load SentenceTransformer model: {e}", exc_info=True)
                 return # Cannot proceed without the model for subsequent logic
