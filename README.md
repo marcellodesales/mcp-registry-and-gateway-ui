@@ -262,9 +262,6 @@ Cursor should now be able to talk to the MCP Gateway and you should be able to u
 
 ![Cursor MCP server](./docs/img/cursor-mcp-server.png)
 
-**To add more MCP servers provided by the Gateway to Cursor and other tools we would need to wait for this [PR 597](https://github.com/modelcontextprotocol/python-sdk/pull/597) on the MCP Python SDK to be merged into the SDK. Please add a +1 to the PR to make sure it makes it into the May 2025 release of the MCP Python SDK**.
-
-
 ### Steps to add a new MCP server to the Gateway and Registry
 
 1. Option 1 (_recommended_): Use `Cursor` or your favorite MCP host of choice that supports SSE to add the MCP Gateway as a server as an MCP server and then simple ask it in naturla language to register a new MCP server and follow the prompts.
