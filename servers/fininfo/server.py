@@ -9,7 +9,7 @@ import argparse
 import logging
 from pydantic import BaseModel, Field
 from mcp.server.fastmcp import FastMCP
-from typing import Dict, Any, Optional, ClassVar
+from typing import Dict, Any, Optional, ClassVar, Annotated
 from pydantic import validator
 from dotenv import load_dotenv
 
@@ -114,32 +114,62 @@ class StockAggregateParams(BaseModel):
 
 
 @mcp.tool()
-def get_stock_aggregates(params: StockAggregateParams) -> Dict[str, Any]:
+def get_stock_aggregates(
+    stock_ticker: Annotated[str, Field(..., description="Case-sensitive ticker symbol (e.g., 'AAPL')")],
+    multiplier: Annotated[int, Field(..., description="Size of the timespan multiplier")],
+    timespan: Annotated[str, Field(..., description="Size of the time window")],
+    from_date: Annotated[str, Field(..., description="Start date in YYYY-MM-DD format or millisecond timestamp")],
+    to_date: Annotated[str, Field(..., description="End date in YYYY-MM-DD format or millisecond timestamp")],
+    adjusted: Annotated[bool, Field(True, description="Whether results are adjusted for splits")] = True,
+    sort: Annotated[Optional[str], Field(None, description="Sort results by timestamp ('asc' or 'desc')")] = None,
+    limit: Annotated[int, Field(5000, description="Maximum number of base aggregates (max 50000)")] = 5000
+) -> Dict[str, Any]:
     """
     Retrieve stock aggregate data from Polygon.io API.
 
     Args:
-        params: StockAggregateParams object containing all required and optional parameters
+        stock_ticker: Case-sensitive ticker symbol (e.g., 'AAPL')
+        multiplier: Size of the timespan multiplier
+        timespan: Size of the time window (minute, hour, day, week, month, quarter, year)
+        from_date: Start date in YYYY-MM-DD format or millisecond timestamp
+        to_date: End date in YYYY-MM-DD format or millisecond timestamp
+        adjusted: Whether results are adjusted for splits (default: True)
+        sort: Sort results by timestamp ('asc' or 'desc', default: None)
+        limit: Maximum number of base aggregates (max 50000, default: 5000)
 
     Returns:
         Dict[str, Any]: Response data from Polygon API
 
     Raises:
+        ValueError: If input parameters are invalid
         requests.RequestException: If API call fails after retries
     """
+    # Validate timespan
+    valid_timespans = ["minute", "hour", "day", "week", "month", "quarter", "year"]
+    if timespan not in valid_timespans:
+        raise ValueError(f"Invalid timespan. Must be one of {valid_timespans}")
+    
+    # Validate sort
+    if sort is not None and sort not in ["asc", "desc"]:
+        raise ValueError("Sort must be either 'asc', 'desc', or None")
+    
+    # Validate limit
+    if limit > 50000:
+        raise ValueError("Limit cannot exceed 50000")
+    
     # Build URL and parameters
     base_url = "https://api.polygon.io"
-    endpoint = f"/v2/aggs/ticker/{params.stock_ticker}/range/{params.multiplier}/{params.timespan}/{params.from_date}/{params.to_date}"
+    endpoint = f"/v2/aggs/ticker/{stock_ticker}/range/{multiplier}/{timespan}/{from_date}/{to_date}"
     url = f"{base_url}{endpoint}"
 
     # Prepare query parameters
-    query_params = {"adjusted": str(params.adjusted).lower(), "apiKey": API_KEY}
+    query_params = {"adjusted": str(adjusted).lower(), "apiKey": API_KEY}
 
-    if params.sort:
-        query_params["sort"] = params.sort
+    if sort:
+        query_params["sort"] = sort
 
-    if params.limit != 5000:  # Only add if not the default
-        query_params["limit"] = params.limit
+    if limit != 5000:  # Only add if not the default
+        query_params["limit"] = limit
 
     # Make the API request with retries
     retry_count = 0
@@ -168,12 +198,28 @@ def get_stock_aggregates(params: StockAggregateParams) -> Dict[str, Any]:
 
 
 @mcp.tool()
-def print_stock_data(params: StockAggregateParams) -> str:
+def print_stock_data(
+    stock_ticker: Annotated[str, Field(..., description="Case-sensitive ticker symbol (e.g., 'AAPL')")],
+    multiplier: Annotated[int, Field(..., description="Size of the timespan multiplier")],
+    timespan: Annotated[str, Field(..., description="Size of the time window")],
+    from_date: Annotated[str, Field(..., description="Start date in YYYY-MM-DD format or millisecond timestamp")],
+    to_date: Annotated[str, Field(..., description="End date in YYYY-MM-DD format or millisecond timestamp")],
+    adjusted: Annotated[bool, Field(True, description="Whether results are adjusted for splits")] = True,
+    sort: Annotated[Optional[str], Field(None, description="Sort results by timestamp ('asc' or 'desc')")] = None,
+    limit: Annotated[int, Field(5000, description="Maximum number of base aggregates (max 50000)")] = 5000
+) -> str:
     """
     Format all fields from the Polygon.io stock aggregate response as a string.
 
     Args:
-        params: StockAggregateParams object to fetch stock data
+        stock_ticker: Case-sensitive ticker symbol (e.g., 'AAPL')
+        multiplier: Size of the timespan multiplier
+        timespan: Size of the time window (minute, hour, day, week, month, quarter, year)
+        from_date: Start date in YYYY-MM-DD format or millisecond timestamp
+        to_date: End date in YYYY-MM-DD format or millisecond timestamp
+        adjusted: Whether results are adjusted for splits (default: True)
+        sort: Sort results by timestamp ('asc' or 'desc', default: None)
+        limit: Maximum number of base aggregates (max 50000, default: 5000)
 
     Returns:
         str: Formatted string containing all stock data
@@ -181,7 +227,17 @@ def print_stock_data(params: StockAggregateParams) -> str:
     # Initialize an empty string to collect all output
     output = []
 
-    response_data = get_stock_aggregates(params)
+    response_data = get_stock_aggregates(
+        stock_ticker=stock_ticker,
+        multiplier=multiplier,
+        timespan=timespan,
+        from_date=from_date,
+        to_date=to_date,
+        adjusted=adjusted,
+        sort=sort,
+        limit=limit
+    )
+    
     if not response_data:
         return "No data available"
 
@@ -261,8 +317,9 @@ def get_config() -> str:
 
 def main():
     # Run the server with the specified transport from command line args
-    mcp.run(transport=args.transport)
-
+    mount_path = "/fininfo"
+    mcp.run(transport=args.transport, mount_path=mount_path)
+    logger.info(f"Server is running on port {args.port} with transport {args.transport}, mount path {mount_path}")
 
 if __name__ == "__main__":
     main()

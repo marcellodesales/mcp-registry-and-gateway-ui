@@ -781,7 +781,9 @@ async def find_intelligent_tool(
 
 def main():
     # Run the server with the specified transport from command line args
-    mcp.run(transport=args.transport)
+    mount_path = "/mcpgw"
+    mcp.run(transport=args.transport, mount_path=mount_path)
+    logger.info(f"Server is running on port {args.port} with transport {args.transport}, mount path {mount_path}")
 
 
 if __name__ == "__main__":

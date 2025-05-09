@@ -10,6 +10,7 @@ import argparse
 import logging
 from mcp.server.fastmcp import FastMCP
 from pydantic import BaseModel, Field
+from typing import Annotated
 
 # Configure logging
 logging.basicConfig(
@@ -18,16 +19,6 @@ logging.basicConfig(
     datefmt='%Y-%m-%d %H:%M:%S'
 )
 logger = logging.getLogger(__name__)
-
-
-class TZ_Name(BaseModel):
-    """Parameters for specifying the name of the timezone for which to find out the current time."""
-
-    tz_name: str = Field(
-        default="America/New_York",
-        description="Name of the timezone for which to find out the current time",
-    )
-
 
 def parse_arguments():
     """Parse command line arguments with defaults matching environment variables."""
@@ -84,12 +75,17 @@ The user's location is: {location}
 
 
 @mcp.tool()
-def current_time_by_timezone(params: TZ_Name) -> str:
+def current_time_by_timezone(
+    tz_name: Annotated[str, Field(
+        default="America/New_York",
+        description="Name of the timezone for which to find out the current time"
+    )] = "America/New_York"
+) -> str:
     """
     Get the current time for a specified timezone using the timeapi.io API.
 
     Args:
-        params: TZ_Name object containing the timezone name
+        tz_name: Name of the timezone for which to find out the current time (default: America/New_York)
 
     Returns:
         str: JSON response from the API with current time information
@@ -99,7 +95,7 @@ def current_time_by_timezone(params: TZ_Name) -> str:
     """
     url = "https://timeapi.io/api/time/current/zone"
     headers = {"accept": "application/json"}
-    params_dict = {"timeZone": params.tz_name}
+    params_dict = {"timeZone": tz_name}
 
     # Retry configuration
     max_retries = 5
@@ -139,7 +135,9 @@ def get_config() -> str:
 
 def main():
     # Run the server with the specified transport from command line args
-    mcp.run(transport=args.transport)
+    mount_path = "/currenttime"
+    mcp.run(transport=args.transport, mount_path=mount_path)
+    logger.info(f"Server is running on port {args.port} with transport {args.transport}, mount path {mount_path}")
 
 
 if __name__ == "__main__":
