@@ -19,85 +19,85 @@
 
         /* -- Theme Color Variables -- Nova-Inspired Light Mode */
         :root {
-            --bg-color: #f8f9fa; /* Very light gray/off-white */
-            --text-color: #16191f; /* Very dark gray/near black */
-            --card-bg: #ffffff; /* White cards */
-            --card-border: #e0e0e0; /* Lighter gray border */
-            --header-bg: #ffffff; /* White header */
-            --sidebar-bg: var(--bg-color); /* Sidebar matches main background */
-            --accent-color: #7a00cc; /* Purple accent */
-            --accent-light-bg: #f7f5ff; /* Very light purple background */
-            --button-bg: var(--accent-color); /* Purple button */
-            --button-text: #ffffff;
-            --secondary-button-bg: #e9ecef; /* Light gray secondary button */
-            --secondary-button-text: var(--text-color);
-            --link-color: var(--accent-color); /* Purple links */
-            --badge-bg: #e9ecef; /* Light gray badge */
-            --badge-text: var(--text-color);
-            --official-badge-bg: var(--accent-light-bg); /* Light purple badge */
-            --official-badge-text: var(--accent-color); /* Purple text on badge */
-            --input-bg: #ffffff;
-            --input-text: var(--text-color);
-            --input-placeholder: #6c757d;
-            --input-border: #ced4da;
-            --input-border-focus: var(--accent-color); /* Purple focus border */
+            --bg-color: #f8f9fa !important; /* Very light gray/off-white */
+            --text-color: #16191f !important; /* Very dark gray/near black */
+            --card-bg: #ffffff !important; /* White cards */
+            --card-border: #e0e0e0 !important; /* Lighter gray border */
+            --header-bg: #ffffff !important; /* White header */
+            --sidebar-bg: var(--bg-color) !important; /* Sidebar matches main background */
+            --accent-color: #7a00cc !important; /* Purple accent */
+            --accent-light-bg: #f7f5ff !important; /* Very light purple background */
+            --button-bg: var(--accent-color) !important; /* Purple button */
+            --button-text: #ffffff !important;
+            --secondary-button-bg: #e9ecef !important; /* Light gray secondary button */
+            --secondary-button-text: var(--text-color) !important;
+            --link-color: var(--accent-color) !important; /* Purple links */
+            --badge-bg: #e9ecef !important; /* Light gray badge */
+            --badge-text: var(--text-color) !important;
+            --official-badge-bg: var(--accent-light-bg) !important; /* Light purple badge */
+            --official-badge-text: var(--accent-color) !important; /* Purple text on badge */
+            --input-bg: #ffffff !important;
+            --input-text: var(--text-color) !important;
+            --input-placeholder: #6c757d !important;
+            --input-border: #ced4da !important;
+            --input-border-focus: var(--accent-color) !important; /* Purple focus border */
             /* Theme Toggle (Keep consistent or adapt?) */
-            --toggle-button-bg: var(--input-bg);
-            --toggle-button-text: var(--text-color);
-            --toggle-button-border: var(--input-border);
+            --toggle-button-bg: var(--input-bg) !important;
+            --toggle-button-text: var(--text-color) !important;
+            --toggle-button-border: var(--input-border) !important;
             /* Sidebar Toggle (Keep consistent or adapt?) */
-            --sidebar-toggle-bg-light: none;
-            --sidebar-toggle-text-light: var(--text-color);
-            --sidebar-toggle-border-light: none;
+            --sidebar-toggle-bg-light: none !important;
+            --sidebar-toggle-text-light: var(--text-color) !important;
+            --sidebar-toggle-border-light: none !important;
         }
 
         /* Dark mode would also need updating to match */
         html.dark-mode {
             /* TODO: Define Nova-inspired dark theme variables */
-            --bg-color: #212529; /* Placeholder dark */
-            --text-color: #f8f9fa; /* Placeholder light text */
-            --card-bg: #343a40; /* Placeholder dark card */
-            --card-border: #495057;
-            --header-bg: #212529; /* Dark header */
-            --accent-color: #a040ff; /* Lighter purple for dark */
-            --accent-light-bg: #3a304f; /* Darker purple bg */
-            --button-bg: var(--accent-color);
-            --button-text: #ffffff;
-            --secondary-button-bg: #495057; /* Dark gray secondary */
-            --secondary-button-text: var(--text-color);
-            --link-color: var(--accent-color);
-            --badge-bg: #495057;
-            --badge-text: var(--text-color);
-            --official-badge-bg: var(--accent-light-bg);
-            --official-badge-text: var(--accent-color);
-            --input-bg: #343a40;
-            --input-text: var(--text-color);
-            --input-placeholder: #adb5bd;
-            --input-border: #495057;
-            --input-border-focus: var(--accent-color);
+            --bg-color: #212529 !important; /* Placeholder dark */
+            --text-color: #f8f9fa !important; /* Placeholder light text */
+            --card-bg: #343a40 !important; /* Placeholder dark card */
+            --card-border: #495057 !important;
+            --header-bg: #212529 !important; /* Dark header */
+            --accent-color: #a040ff !important; /* Lighter purple for dark */
+            --accent-light-bg: #3a304f !important; /* Darker purple bg */
+            --button-bg: var(--accent-color) !important;
+            --button-text: #ffffff !important;
+            --secondary-button-bg: #495057 !important; /* Dark gray secondary */
+            --secondary-button-text: var(--text-color) !important;
+            --link-color: var(--accent-color) !important;
+            --badge-bg: #495057 !important;
+            --badge-text: var(--text-color) !important;
+            --official-badge-bg: var(--accent-light-bg) !important;
+            --official-badge-text: var(--accent-color) !important;
+            --input-bg: #343a40 !important;
+            --input-text: var(--text-color) !important;
+            --input-placeholder: #adb5bd !important;
+            --input-border: #495057 !important;
+            --input-border-focus: var(--accent-color) !important;
             /* Keep toggles simple for now */
-            --toggle-button-bg: #495057;
-            --toggle-button-text: var(--text-color);
-            --toggle-button-border: #6c757d;
+            --toggle-button-bg: #495057 !important;
+            --toggle-button-text: var(--text-color) !important;
+            --toggle-button-border: #6c757d !important;
         }
 
-        /* Apply variables */
+        /* Apply variables with !important to override style.css */
         body {
-            background-color: var(--bg-color);
-            color: var(--text-color);
+            background-color: var(--bg-color) !important;
+            color: var(--text-color) !important;
             font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
             line-height: 1.6; /* Improve readability */
         }
         .main-header {
-            background-color: var(--header-bg);
-            border-bottom: 1px solid var(--card-border); /* Add subtle border */
+            background-color: var(--header-bg) !important;
+            border-bottom: 1px solid var(--card-border) !important;
             /* Add box-shadow for slight elevation */
             box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
             /* Assuming header text color is inherited or set in style.css */
         }
         .sidebar {
-             background-color: var(--sidebar-bg);
-             color: var(--text-color); /* Ensure sidebar uses main text color */
+             background-color: var(--sidebar-bg) !important;
+             color: var(--text-color) !important; /* Ensure sidebar uses main text color */
         }
         .sidebar h3 {
             color: var(--text-color); /* Ensure heading uses text color */
@@ -116,14 +116,14 @@
              /* Assuming the count badge has its own styling */
         }
         .service-card {
-            background-color: var(--card-bg);
-            border: 1px solid var(--card-border);
-            color: var(--text-color); /* Ensure card text uses theme color */
+            background-color: var(--card-bg) !important;
+            border: 1px solid var(--card-border) !important;
+            color: var(--text-color) !important; /* Ensure card text uses theme color */
             box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05); /* Subtle shadow */
             border-radius: 12px; /* --- Add rounding --- */
         }
         .service-card h2, .service-card .owner, .service-card .description {
-             color: var(--text-color); /* Explicitly set text color */
+             color: var(--text-color) !important; /* Explicitly set text color */
         }
         /* Example for a specific badge if needed */
         .badge,
@@ -141,8 +141,8 @@
             /* Assuming style.css defines button styles, override if needed */
             /* background-color: var(--button-bg); */
             /* color: var(--button-text); */
-            background-color: var(--button-bg);
-            color: var(--button-text);
+            background-color: var(--button-bg) !important;
+            color: var(--button-text) !important;
             border: none;
             padding: 8px 16px;
             border-radius: 8px; /* --- Add rounding --- */
@@ -161,8 +161,8 @@
         }
         .logout-button,
         .search-bar button {
-            background-color: var(--secondary-button-bg);
-            color: var(--secondary-button-text);
+            background-color: var(--secondary-button-bg) !important;
+            color: var(--secondary-button-text) !important;
             border: 1px solid var(--card-border); /* Use card border for light gray */
             padding: 8px 16px;
             border-radius: 8px; /* --- Add rounding --- */
@@ -300,7 +300,7 @@
 
         /* Ensure main title uses text color */
         .content h1 {
-            color: var(--text-color);
+            color: var(--text-color) !important;
         }
 
         /* --- Theme Toggle Button --- */
@@ -546,25 +546,215 @@
             align-items: center; /* Vertically center items inside logo */
             gap: 8px; /* Space between logo image and text */
         }
+
+        /* Registration Modal Tabs */
+        .registration-tabs {
+            display: flex;
+            margin-bottom: 15px;
+            border-bottom: 1px solid var(--card-border);
+        }
+        .tab-button {
+            padding: 10px 15px;
+            cursor: pointer;
+            border: none;
+            background-color: transparent;
+            color: var(--text-color);
+            font-weight: 600;
+            border-bottom: 3px solid transparent;
+            margin-bottom: -1px; /* Overlap with container border */
+        }
+        .tab-button.active {
+            border-bottom-color: var(--accent-color);
+            color: var(--accent-color);
+        }
+        .tab-button:hover {
+            background-color: var(--secondary-button-bg);
+        }
+        .tab-content {
+            display: none;
+        }
+        .tab-content.active {
+            display: block;
+        }
+        .form-input {
+            width: 100%;
+            padding: 8px 10px;
+            margin-bottom: 10px;
+            border: 1px solid var(--input-border);
+            border-radius: 6px;
+            background-color: var(--input-bg);
+            color: var(--input-text);
+            box-sizing: border-box;
+        }
+        .form-input:focus {
+            border-color: var(--input-border-focus);
+            outline: none;
+            box-shadow: 0 0 0 2px rgba(122, 0, 204, 0.2);
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 600;
+            color: var(--text-color);
+        }
+        #registration-feedback.success {
+            background-color: #d4edda; /* Light green */
+            color: #155724; /* Dark green */
+            border: 1px solid #c3e6cb;
+        }
+        #registration-feedback.error {
+            background-color: #f8d7da; /* Light red */
+            color: #721c24; /* Dark red */
+            border: 1px solid #f5c6cb;
+        }
+
+        /* --- Register Server Button --- */
+        .register-server-button {
+            background-color: var(--accent-color);
+            color: var(--button-text);
+            border: none;
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background-color 0.2s ease;
+            margin-left: 10px; /* Space from previous element */
+        }
+        .register-server-button:hover {
+            opacity: 0.9;
+        }
+
+        /* Registration Modal Styles */
+        /* (Reusing .modal-overlay and .modal-content from tool modal for consistency) */
+        /* Additional styles for registration modal specifics if needed */
+        #register-server-modal .modal-content {
+            min-width: 400px; /* Adjust as needed */
+            max-width: 700px; /* Adjust as needed */
+        }
+
+        /* Registration Modal Tabs */
+        .registration-tabs {
+            display: flex;
+            margin-bottom: 15px;
+            border-bottom: 1px solid var(--card-border);
+        }
+        .tab-button {
+            padding: 10px 15px;
+            cursor: pointer;
+            border: none;
+            background-color: transparent;
+            color: var(--text-color);
+            font-weight: 600;
+            border-bottom: 3px solid transparent;
+            margin-bottom: -1px; /* Overlap with container border */
+        }
+        .tab-button.active {
+            border-bottom-color: var(--accent-color);
+            color: var(--accent-color);
+        }
+        .tab-button:hover {
+            background-color: var(--secondary-button-bg);
+        }
+        .tab-content {
+            display: none;
+        }
+        .tab-content.active {
+            display: block;
+        }
+        .form-input {
+            width: 100%;
+            padding: 8px 10px;
+            margin-bottom: 10px;
+            border: 1px solid var(--input-border);
+            border-radius: 6px;
+            background-color: var(--input-bg);
+            color: var(--input-text);
+            box-sizing: border-box;
+        }
+        .form-input:focus {
+            border-color: var(--input-border-focus);
+            outline: none;
+            box-shadow: 0 0 0 2px rgba(122, 0, 204, 0.2);
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 600;
+            color: var(--text-color);
+        }
+        #registration-feedback.success {
+            background-color: #d4edda; /* Light green */
+            color: #155724; /* Dark green */
+            border: 1px solid #c3e6cb;
+        }
+        #registration-feedback.error {
+            background-color: #f8d7da; /* Light red */
+            color: #721c24; /* Dark red */
+            border: 1px solid #f5c6cb;
+        }
+
+        /* Add these additional style rules to explicitly override style.css colors */
+        .sidebar-toggle-button {
+            color: var(--text-color) !important;
+        }
+        .theme-toggle-button {
+            color: var(--text-color) !important;
+        }
+        .logo span {
+            color: var(--text-color) !important;
+        }
+        .header-right .user-display {
+            color: var(--text-color) !important;
+        }
+        .sidebar ul li span:first-child {
+            color: var(--text-color) !important;
+        }
+        .card-header h2 {
+            color: var(--text-color) !important;
+        }
+        .card-body .owner {
+            color: var(--text-color) !important;
+        }
+        .badge {
+            color: var(--text-color) !important;
+            background-color: var(--badge-bg) !important;
+        }
+        .search-bar input[type="search"] {
+            background-color: var(--input-bg) !important;
+            color: var(--input-text) !important;
+            border-color: var(--input-border) !important;
+        }
+        .modal-content {
+            background-color: var(--card-bg) !important;
+            color: var(--text-color) !important;
+        }
     </style>
     <script>
         // =====================================================================
         // == Initialization & Configuration
         // =====================================================================
 
-        // Immediately invoked function to apply theme before rendering
+        // --- Fix the initial theme setup function ---
         (function() {
             const savedTheme = localStorage.getItem('theme');
             const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
-            const theme = savedTheme || (prefersDark ? 'dark' : 'dark'); // Default to dark
-            console.log('[HEAD SCRIPT] Determined initial theme:', theme);
+            // Use saved theme if available, otherwise respect user's OS preference
+            const theme = savedTheme || (prefersDark ? 'dark' : 'light');
+            console.log('[HEAD SCRIPT] Initial theme setup:', theme, 'from:', savedTheme ? 'localStorage' : 'OS preference');
+            
+            const htmlElement = document.documentElement;
             if (theme === 'dark') {
-                document.documentElement.classList.add('dark-mode');
-                // Optional: document.documentElement.setAttribute('data-theme', 'dark');
+                htmlElement.classList.add('dark-mode');
+                htmlElement.setAttribute('data-theme', 'dark');
             } else {
-                document.documentElement.classList.remove('dark-mode');
-                // Explicitly set data-theme for light mode on initial load
-                document.documentElement.setAttribute('data-theme', 'light');
+                htmlElement.classList.remove('dark-mode');
+                htmlElement.setAttribute('data-theme', 'light');
             }
         })();
 
@@ -889,7 +1079,8 @@
         // == Modal Logic
         // =====================================================================
 
-        async function showToolModal(servicePath, serviceName) {
+        // --- Tool Modal Handling ---
+        function showToolModal(servicePath, serviceName) {
             const toolModal = document.getElementById('tool-modal');
             const toolModalTitle = document.getElementById('tool-modal-title');
             const toolModalListContainer = document.getElementById('tool-modal-list-container');
@@ -902,132 +1093,154 @@
             toolModalListContainer.innerHTML = '<p>Loading...</p>';
             toolModal.style.display = 'flex';
 
-            try {
-                const apiPath = servicePath.startsWith('/') ? servicePath : '/' + servicePath;
-                const response = await fetch(`/api/tools${apiPath}`);
-                toolModalListContainer.innerHTML = ''; // Clear loading
+            // Ensure the path is properly formatted with leading slash
+            const apiPath = servicePath.startsWith('/') ? servicePath : '/' + servicePath;
+            
+            // Explicitly construct the full URL through the gateway/proxy, NOT direct to port 7860
+            const proxyUrl = window.location.origin + '/api/tools' + apiPath;
+            console.log(`Fetching tools from: ${proxyUrl}`);
+            
+            // Use fetch with proper error handling
+            fetch(proxyUrl, {
+                method: 'GET',
+                credentials: 'same-origin'
+            })
+                .then(response => {
+                    console.log(`Tool fetch response: ${response.status} ${response.statusText}`);
+                    if (!response.ok) {
+                        return response.json().then(data => {
+                            throw new Error(data.detail || `Error: ${response.status} ${response.statusText}`);
+                        }).catch(e => {
+                            throw new Error(`Error: ${response.status} ${response.statusText}`);
+                        });
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    console.log(`Tool data received:`, data);
+                    toolModalListContainer.innerHTML = '';
+                    
+                    const tools = data.tools || [];
+                    
+                    if (tools && tools.length > 0) {
+                        tools.forEach(tool => {
+                            const toolDiv = document.createElement('div');
+                            toolDiv.style.marginBottom = '15px';
+                            toolDiv.style.borderBottom = '1px solid var(--card-border)';
+                            toolDiv.style.paddingBottom = '10px';
 
-                if (!response.ok) {
-                    let errorMsg = `Error fetching tools: ${response.status} ${response.statusText}`;
-                    try { const errorData = await response.json(); errorMsg = errorData.detail || errorMsg; } catch(e) {}
-                    throw new Error(errorMsg);
-                }
+                            const nameEl = document.createElement('h4');
+                            nameEl.textContent = tool.name || 'Unnamed Tool';
+                            nameEl.style.marginTop = '0'; nameEl.style.marginBottom = '5px';
+                            toolDiv.appendChild(nameEl);
 
-                const data = await response.json();
-                const tools = data.tools;
+                            // Render Parsed Description
+                            if (tool.parsed_description) {
+                                const mainDescEl = document.createElement('p');
+                                mainDescEl.textContent = tool.parsed_description.main || 'No description available.';
+                                mainDescEl.style.whiteSpace = 'pre-wrap';
+                                toolDiv.appendChild(mainDescEl);
 
-                if (tools && tools.length > 0) {
-                    tools.forEach(tool => {
-                        const toolDiv = document.createElement('div');
-                        toolDiv.style.marginBottom = '15px';
-                        toolDiv.style.borderBottom = '1px solid var(--card-border)';
-                        toolDiv.style.paddingBottom = '10px';
+                                const renderSection = (title, content) => {
+                                    if (!content) return;
+                                    const titleEl = document.createElement('strong');
+                                    titleEl.textContent = title + ':';
+                                    titleEl.style.display = 'block'; titleEl.style.marginTop = '8px';
+                                    toolDiv.appendChild(titleEl);
+                                    const preEl = document.createElement('pre');
+                                    preEl.textContent = content;
+                                    preEl.style.marginLeft = '10px'; preEl.style.marginTop = '3px';
+                                    preEl.style.whiteSpace = 'pre-wrap'; preEl.style.fontSize = '0.9em';
+                                    toolDiv.appendChild(preEl);
+                                };
+                                renderSection('Args', tool.parsed_description.args);
+                                renderSection('Returns', tool.parsed_description.returns);
+                                renderSection('Raises', tool.parsed_description.raises);
+                            } else if (tool.description) { // Fallback
+                                const descEl = document.createElement('p');
+                                descEl.textContent = tool.description;
+                                descEl.style.marginBottom = '8px';
+                                toolDiv.appendChild(descEl);
+                            }
 
-                        const nameEl = document.createElement('h4');
-                        nameEl.textContent = tool.name || 'Unnamed Tool';
-                        nameEl.style.marginTop = '0'; nameEl.style.marginBottom = '5px';
-                        toolDiv.appendChild(nameEl);
+                            // Render Schema
+                            if (tool.schema && typeof tool.schema === 'object' && Object.keys(tool.schema).length > 0) {
+                                const schemaContainer = document.createElement('div');
+                                schemaContainer.style.marginTop = '10px';
+                                schemaContainer.innerHTML = '<strong>Input Schema:</strong>';
 
-                        // Render Parsed Description
-                        if (tool.parsed_description) {
-                            const mainDescEl = document.createElement('p');
-                            mainDescEl.textContent = tool.parsed_description.main || 'No description available.';
-                            mainDescEl.style.whiteSpace = 'pre-wrap';
-                            toolDiv.appendChild(mainDescEl);
+                                const properties = tool.schema.properties;
+                                const required = tool.schema.required || [];
 
-                            const renderSection = (title, content) => {
-                                if (!content) return;
-                                const titleEl = document.createElement('strong');
-                                titleEl.textContent = title + ':';
-                                titleEl.style.display = 'block'; titleEl.style.marginTop = '8px';
-                                toolDiv.appendChild(titleEl);
-                                const preEl = document.createElement('pre');
-                                preEl.textContent = content;
-                                preEl.style.marginLeft = '10px'; preEl.style.marginTop = '3px';
-                                preEl.style.whiteSpace = 'pre-wrap'; preEl.style.fontSize = '0.9em';
-                                toolDiv.appendChild(preEl);
-                            };
-                            renderSection('Args', tool.parsed_description.args);
-                            renderSection('Returns', tool.parsed_description.returns);
-                            renderSection('Raises', tool.parsed_description.raises);
+                                if (properties && typeof properties === 'object' && Object.keys(properties).length > 0) {
+                                    const propsList = document.createElement('div');
+                                    propsList.style.marginLeft = '15px'; propsList.style.marginTop = '5px';
+                                    propsList.style.borderLeft = '2px solid var(--card-border)'; propsList.style.paddingLeft = '10px';
 
-                        } else if (tool.description) { // Fallback
-                            const descEl = document.createElement('p');
-                            descEl.textContent = tool.description;
-                            descEl.style.marginBottom = '8px';
-                            toolDiv.appendChild(descEl);
-                        }
+                                    for (const [propName, propDetails] of Object.entries(properties)) {
+                                        const propDiv = document.createElement('div');
+                                        propDiv.style.marginBottom = '8px';
 
-                        // Render Schema
-                        if (tool.schema && typeof tool.schema === 'object' && Object.keys(tool.schema).length > 0) {
-                            const schemaContainer = document.createElement('div');
-                            schemaContainer.style.marginTop = '10px';
-                            schemaContainer.innerHTML = '<strong>Input Schema:</strong>';
+                                        const nameSpan = document.createElement('strong');
+                                        nameSpan.textContent = propName;
+                                        propDiv.appendChild(nameSpan);
 
-                            const properties = tool.schema.properties;
-                            const required = tool.schema.required || [];
-
-                            if (properties && typeof properties === 'object' && Object.keys(properties).length > 0) {
-                                const propsList = document.createElement('div');
-                                propsList.style.marginLeft = '15px'; propsList.style.marginTop = '5px';
-                                propsList.style.borderLeft = '2px solid var(--card-border)'; propsList.style.paddingLeft = '10px';
-
-                                for (const [propName, propDetails] of Object.entries(properties)) {
-                                    const propDiv = document.createElement('div');
-                                    propDiv.style.marginBottom = '8px';
-
-                                    const nameSpan = document.createElement('strong');
-                                    nameSpan.textContent = propName;
-                                    propDiv.appendChild(nameSpan);
-
-                                    if (required.includes(propName)) {
-                                        const reqSpan = document.createElement('span');
-                                        reqSpan.textContent = ' (required)'; reqSpan.style.color = '#dc3545';
-                                        reqSpan.style.fontSize = '0.8em'; reqSpan.style.marginLeft = '3px';
-                                        propDiv.appendChild(reqSpan);
+                                        if (required.includes(propName)) {
+                                            const reqSpan = document.createElement('span');
+                                            reqSpan.textContent = ' (required)'; reqSpan.style.color = '#dc3545';
+                                            reqSpan.style.fontSize = '0.8em'; reqSpan.style.marginLeft = '3px';
+                                            propDiv.appendChild(reqSpan);
+                                        }
+                                        if (propDetails.type) {
+                                            const typeSpan = document.createElement('span');
+                                            typeSpan.textContent = ` - Type: ${propDetails.type}`;
+                                            typeSpan.style.color = 'var(--input-placeholder)'; typeSpan.style.marginLeft = '5px';
+                                            propDiv.appendChild(typeSpan);
+                                        }
+                                        if (propDetails.description) {
+                                            const descP = document.createElement('p');
+                                            descP.textContent = propDetails.description;
+                                            descP.style.margin = '3px 0 0 10px'; descP.style.fontSize = '0.85em';
+                                            propDiv.appendChild(descP);
+                                        }
+                                        if (propDetails.default !== undefined) {
+                                            const defaultP = document.createElement('p');
+                                            defaultP.textContent = `Default: ${JSON.stringify(propDetails.default)}`;
+                                            defaultP.style.margin = '3px 0 0 10px'; defaultP.style.fontSize = '0.85em';
+                                            defaultP.style.color = 'var(--input-placeholder)';
+                                            propDiv.appendChild(defaultP);
+                                        }
+                                        propsList.appendChild(propDiv);
                                     }
-                                    if (propDetails.type) {
-                                        const typeSpan = document.createElement('span');
-                                        typeSpan.textContent = ` - Type: ${propDetails.type}`;
-                                        typeSpan.style.color = 'var(--input-placeholder)'; typeSpan.style.marginLeft = '5px';
-                                        propDiv.appendChild(typeSpan);
-                                    }
-                                    if (propDetails.description) {
-                                        const descP = document.createElement('p');
-                                        descP.textContent = propDetails.description;
-                                        descP.style.margin = '3px 0 0 10px'; descP.style.fontSize = '0.85em';
-                                        propDiv.appendChild(descP);
-                                    }
-                                    if (propDetails.default !== undefined) {
-                                        const defaultP = document.createElement('p');
-                                        defaultP.textContent = `Default: ${JSON.stringify(propDetails.default)}`;
-                                        defaultP.style.margin = '3px 0 0 10px'; defaultP.style.fontSize = '0.85em';
-                                        defaultP.style.color = 'var(--input-placeholder)';
-                                        propDiv.appendChild(defaultP);
-                                    }
-                                    propsList.appendChild(propDiv);
+                                    schemaContainer.appendChild(propsList);
+                                } else {
+                                    schemaContainer.innerHTML += '<p style="margin-left: 15px; font-style: italic;">No input parameters defined.</p>';
                                 }
-                                schemaContainer.appendChild(propsList);
-                            } else {
-                                schemaContainer.innerHTML += '<p style="margin-left: 15px; font-style: italic;">No input parameters defined.</p>';
+                                // Optionally display $defs notice
+                                if (tool.schema.$defs && Object.keys(tool.schema.$defs).length > 0) {
+                                    schemaContainer.innerHTML += '<p style="margin-top: 10px; font-size: 0.8em; color: var(--input-placeholder);"><strong>Definitions:</strong> (Schema uses shared definitions not fully displayed here)</p>';
+                                }
+                                toolDiv.appendChild(schemaContainer);
+                            } else if (tool.schema && Object.keys(tool.schema).length === 0){
+                                toolDiv.innerHTML += '<p style="margin-top: 10px; font-style: italic;"><strong>Input Schema:</strong> No parameters defined.</p>';
                             }
-                            // Optionally display $defs notice
-                            if (tool.schema.$defs && Object.keys(tool.schema.$defs).length > 0) {
-                                schemaContainer.innerHTML += '<p style="margin-top: 10px; font-size: 0.8em; color: var(--input-placeholder);"><strong>Definitions:</strong> (Schema uses shared definitions not fully displayed here)</p>';
-                            }
-                            toolDiv.appendChild(schemaContainer);
-                        } else if (tool.schema && Object.keys(tool.schema).length === 0){
-                             toolDiv.innerHTML += '<p style="margin-top: 10px; font-style: italic;"><strong>Input Schema:</strong> No parameters defined.</p>';
-                        }
-                        toolModalListContainer.appendChild(toolDiv);
-                    });
-                } else {
-                    toolModalListContainer.innerHTML = '<p>No tools listed for this service.</p>';
-                }
-            } catch (error) {
-                console.error("Failed to fetch or display tools:", error);
-                toolModalListContainer.innerHTML = `<p style="color: red;">Could not load tools: ${error.message}</p>`;
-            }
+                            toolModalListContainer.appendChild(toolDiv);
+                        });
+                    } else {
+                        toolModalListContainer.innerHTML = `
+                            <p>No tools listed for this service.</p>
+                            <p style="font-size: 0.9em; color: #6c757d; margin-top: 10px;">
+                                Service reports ${data.tools ? data.tools.length : 0} tools.
+                                <br>API path: ${apiPath}
+                                <br>Last response: ${new Date().toLocaleTimeString()}
+                            </p>
+                        `;
+                    }
+                })
+                .catch(error => {
+                    console.error("Failed to fetch or display tools:", error);
+                    toolModalListContainer.innerHTML = `<p style="color: red;">Could not load tools: ${error.message}</p>`;
+                });
         }
 
         function closeToolModal() {
@@ -1042,18 +1255,229 @@
         }
 
         // =====================================================================
+        // == Registration Modal Logic
+        // =====================================================================
+        function showRegisterModal() {
+            const modal = document.getElementById('register-server-modal');
+            if (modal) {
+                modal.style.display = 'flex';
+                // Reset to the first tab
+                switchRegisterTab('upload');
+                document.getElementById('registration-feedback').style.display = 'none';
+                document.getElementById('registration-feedback').textContent = '';
+
+                // Clear previous inputs
+                const fileInput = document.getElementById('json-file-input');
+                if (fileInput) fileInput.value = ''; // Clear file input
+                const pasteArea = document.getElementById('json-paste-area');
+                if (pasteArea) pasteArea.value = ''; // Clear text area
+                const regForm = document.getElementById('register-server-form');
+                if (regForm) regForm.reset(); // Reset the form
+            }
+        }
+
+        function closeRegisterModal() {
+            const modal = document.getElementById('register-server-modal');
+            if (modal) {
+                modal.style.display = 'none';
+            }
+        }
+
+        function switchRegisterTab(tabName) {
+            document.querySelectorAll('.registration-tabs .tab-button').forEach(button => {
+                button.classList.remove('active');
+            });
+            document.querySelectorAll('.modal-content .tab-content').forEach(content => {
+                content.classList.remove('active');
+            });
+
+            document.querySelector(`.registration-tabs .tab-button[data-tab="${tabName}"]`).classList.add('active');
+            document.getElementById(`tab-${tabName}`).classList.add('active');
+        }
+
+        function displayRegistrationFeedback(message, isSuccess) {
+            const feedbackDiv = document.getElementById('registration-feedback');
+            feedbackDiv.textContent = message;
+            feedbackDiv.className = isSuccess ? 'success' : 'error';
+            feedbackDiv.style.display = 'block';
+        }
+
+        // --- New JSON Validation Function --- START
+        function validateJsonData(jsonData) {
+            const errors = [];
+            if (!jsonData) {
+                errors.push('No JSON data provided.');
+                return { isValid: false, errors };
+            }
+
+            // Required fields
+            if (typeof jsonData.server_name !== 'string' || !jsonData.server_name.trim()) {
+                errors.push("'Server Name (server_name)' is required and must be a non-empty string.");
+            }
+            if (typeof jsonData.path !== 'string' || !jsonData.path.trim()) {
+                errors.push("'Path (path)' is required and must be a non-empty string.");
+            } else if (!jsonData.path.startsWith('/')) {
+                errors.push("'Path (path)' must start with a \"/\".");
+            }
+            if (typeof jsonData.proxy_pass_url !== 'string' || !jsonData.proxy_pass_url.trim()) {
+                errors.push("'Proxy Pass URL (proxy_pass_url)' is required and must be a non-empty string.");
+            } else {
+                try {
+                    new URL(jsonData.proxy_pass_url);
+                } catch (_) {
+                    errors.push("'Proxy Pass URL (proxy_pass_url)' must be a valid URL.");
+                }
+            }
+
+            // Optional fields type checks (if present)
+            if (jsonData.hasOwnProperty('description') && typeof jsonData.description !== 'string') {
+                errors.push("'Description (description)' must be a string if provided.");
+            }
+            if (jsonData.hasOwnProperty('tags') && !Array.isArray(jsonData.tags)) {
+                errors.push("'Tags (tags)' must be an array of strings if provided in JSON.");
+            } else if (jsonData.hasOwnProperty('tags') && Array.isArray(jsonData.tags)) {
+                if (!jsonData.tags.every(tag => typeof tag === 'string')) {
+                    errors.push("All items in 'Tags (tags)' must be strings.");
+                }
+            }
+
+            if (jsonData.hasOwnProperty('num_stars') && typeof jsonData.num_stars !== 'number') {
+                errors.push("'Stars (num_stars)' must be a number if provided.");
+            } else if (jsonData.hasOwnProperty('num_stars') && typeof jsonData.num_stars === 'number' && jsonData.num_stars < 0) {
+                 errors.push("'Stars (num_stars)' cannot be negative.");
+            }
+
+            if (jsonData.hasOwnProperty('is_python') && typeof jsonData.is_python !== 'boolean') {
+                errors.push("'Is Python (is_python)' must be a boolean (true/false) if provided.");
+            }
+            if (jsonData.hasOwnProperty('license') && typeof jsonData.license !== 'string') {
+                errors.push("'License (license)' must be a string if provided.");
+            }
+
+            return {
+                isValid: errors.length === 0,
+                errors: errors
+            };
+        }
+        // --- New JSON Validation Function --- END
+
+        async function handleRegistrationSubmit(formData) {
+            const feedbackDiv = document.getElementById('registration-feedback');
+            feedbackDiv.style.display = 'none'; // Hide previous messages
+
+            try {
+                const response = await fetch('/register', {
+                    method: 'POST',
+                    body: formData // FormData will set Content-Type to multipart/form-data
+                });
+
+                const result = await response.json();
+
+                if (response.ok) {
+                    displayRegistrationFeedback(result.message || 'Server registered successfully!', true);
+                    setTimeout(() => {
+                        closeRegisterModal();
+                        // Assuming WebSocket will update the list, or manually trigger a refresh if needed
+                        // window.location.reload(); // Or a more targeted refresh
+                    }, 2000);
+                } else {
+                    displayRegistrationFeedback(result.error || `Error: ${response.statusText}`, false);
+                }
+            } catch (error) {
+                console.error('Registration error:', error);
+                displayRegistrationFeedback(`Client-side error: ${error.message}`, false);
+            }
+        }
+
+        function processJsonRegistration(jsonData) {
+            const formData = new FormData();
+
+            // --- Validate JSON data first --- START
+            const validationResult = validateJsonData(jsonData);
+            if (!validationResult.isValid) {
+                displayRegistrationFeedback('JSON validation failed: \n' + validationResult.errors.join('\n'), false);
+                return;
+            }
+            // --- Validate JSON data first --- END
+
+            // Map JSON fields to FormData expected by the /register endpoint
+            if (!jsonData.server_name || !jsonData.path || !jsonData.proxy_pass_url) {
+                displayRegistrationFeedback('Error: JSON data must include server_name, path, and proxy_pass_url.', false);
+                return;
+            }
+            formData.append('name', jsonData.server_name);
+            formData.append('description', jsonData.description || '');
+            formData.append('path', jsonData.path);
+            formData.append('proxy_pass_url', jsonData.proxy_pass_url);
+            formData.append('tags', Array.isArray(jsonData.tags) ? jsonData.tags.join(',') : (jsonData.tags || ''));
+            formData.append('num_stars', jsonData.num_stars !== undefined ? jsonData.num_stars.toString() : '0');
+            formData.append('is_python', jsonData.is_python ? 'true' : ''); // FastAPI expects 'true' or empty for bool
+            formData.append('license', jsonData.license || 'N/A');
+            
+            handleRegistrationSubmit(formData);
+        }
+
+        function handleJsonFileUpload() {
+            const fileInput = document.getElementById('json-file-input');
+            if (!fileInput.files.length) {
+                displayRegistrationFeedback('Please select a JSON file.', false);
+                return;
+            }
+            const file = fileInput.files[0];
+            const reader = new FileReader();
+            reader.onload = function(event) {
+                try {
+                    const jsonData = JSON.parse(event.target.result);
+                    processJsonRegistration(jsonData);
+                } catch (e) {
+                    displayRegistrationFeedback(`Error parsing JSON file: ${e.message}`, false);
+                }
+            };
+            reader.onerror = function() {
+                displayRegistrationFeedback('Error reading file.', false);
+            };
+            reader.readAsText(file);
+        }
+
+        function handleJsonPasteSubmit() {
+            const pasteArea = document.getElementById('json-paste-area');
+            try {
+                const jsonData = JSON.parse(pasteArea.value.trim()); // Trim whitespace before parsing
+                processJsonRegistration(jsonData);
+            } catch (e) {
+                displayRegistrationFeedback(`Error parsing pasted JSON: ${e.message}`, false);
+            }
+        }
+
+        function handleRegisterFormSubmit(event) {
+            event.preventDefault();
+            const form = event.target;
+            const formData = new FormData(form);
+
+            // FastAPI expects boolean Form fields to be 'true' or absent/empty string.
+            // If checkbox is not checked, 'is_python' won't be in formData if it's not set to a value.
+            // If it is checked, its value (e.g., 'true') will be sent.
+            // We need to ensure 'is_python' sends 'true' or an empty string for proper boolean conversion by FastAPI.
+            if (!formData.has('is_python')) { // If checkbox not checked, it won't be in FormData
+                formData.append('is_python', ''); // Send empty string, FastAPI bool conversion handles this as False
+            }
+            // For other fields, if they are empty, they will be sent as empty strings.
+            // The backend API handles default values for optional fields if they are empty.
+
+            handleRegistrationSubmit(formData);
+        }
+
+        // =====================================================================
         // == WebSocket Logic
         // =====================================================================
-
-        let ws = null;
-        let reconnectInterval = 5000; // Start with 5 seconds
 
         function connectWebSocket() {
             const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
             const wsUrl = `${wsProtocol}//${window.location.host}/ws/health_status`;
             console.log(`Attempting to connect WebSocket to ${wsUrl}...`);
 
-            ws = new WebSocket(wsUrl);
+            const ws = new WebSocket(wsUrl);
+            let reconnectInterval = 5000; // Start with 5 seconds
 
             ws.onopen = () => {
                 console.log("WebSocket connection established.");
@@ -1061,10 +1485,8 @@
             };
 
             ws.onmessage = (event) => {
-                // console.log("WebSocket message received:", event.data);
                 try {
                     const data = JSON.parse(event.data);
-                    // console.log("Parsed WebSocket data:", data);
 
                     // Update displays for each service in the message
                     for (const path in data) {
@@ -1081,6 +1503,9 @@
                     }
                      // Update sidebar stats after processing the message
                      updateSidebarStats(data);
+                    
+                    // Re-bind event handlers after dynamic updates
+                    bindEventHandlers();
 
                 } catch (error) {
                     console.error("Error parsing WebSocket message or updating UI:", error);
@@ -1089,16 +1514,101 @@
 
             ws.onerror = (error) => {
                 console.error("WebSocket error:", error);
-                // Error event likely followed by close event, rely on close for reconnect logic
             };
 
             ws.onclose = (event) => {
                 console.log(`WebSocket connection closed. Code: ${event.code}, Reason: ${event.reason}. Attempting to reconnect in ${reconnectInterval / 1000}s...`);
-                ws = null; // Ensure ws variable is nullified
                 setTimeout(connectWebSocket, reconnectInterval);
                 // Optional: Exponential backoff
                 // reconnectInterval = Math.min(reconnectInterval * 2, 60000); // Double interval up to 60s
             };
+        }
+
+        // =====================================================================
+        // == Event Binding
+        // =====================================================================
+
+        // Centralized function to bind all event handlers
+        function bindEventHandlers() {
+            // Bind toggle event handlers
+            document.querySelectorAll('.toggle-checkbox').forEach(checkbox => {
+                // Remove existing handler first to prevent duplicates
+                checkbox.removeEventListener('change', handleToggleClick);
+                checkbox.addEventListener('change', handleToggleClick);
+            });
+
+            // Bind tool icons click handlers using event delegation instead
+            document.querySelectorAll('.clickable-tool-icon').forEach(icon => {
+                // Remove existing handler first to prevent duplicates
+                icon.removeEventListener('click', handleToolIconClick);
+                icon.addEventListener('click', handleToolIconClick);
+            });
+        }
+
+        // Tool icon click handler as a separate named function so it can be removed/readded
+        function handleToolIconClick() {
+            const servicePath = this.dataset.path;
+            const serviceName = this.dataset.name;
+            if (servicePath && serviceName) {
+                showToolModal(servicePath, serviceName);
+            } else {
+                console.error("Missing data attributes on tool icon", this);
+            }
+        }
+
+        // Refresh button click handler
+        function handleRefreshClick(event) {
+            const refreshButton = event.target.closest('.refresh-button');
+            if (!refreshButton || refreshButton.disabled) {
+                return; // Ignore clicks not on an enabled refresh button
+            }
+
+            event.preventDefault(); // Prevent any default button action if needed
+
+            const servicePath = refreshButton.dataset.path;
+            if (!servicePath) {
+                console.error("Refresh button missing data-path attribute.");
+                return;
+            }
+            console.log(`Refresh button clicked for path: ${servicePath}`);
+
+            // Indicate loading state
+            refreshButton.disabled = true;
+            const originalIconHTML = refreshButton.innerHTML;
+            // Use a simple spinner for loading feedback
+            refreshButton.innerHTML = '<span class="status-spinner" style="width: 0.9em; height: 0.9em; border-width: 2px; top: 0;"></span>';
+
+            fetch(`/api/refresh${servicePath}`, { method: 'POST' })
+                .then(response => {
+                    if (!response.ok) {
+                        return response.json().then(data => {
+                            throw new Error(data.detail || `Error refreshing: ${response.status} ${response.statusText}`);
+                        }).catch(e => {
+                            throw new Error(`Error refreshing: ${response.status} ${response.statusText}`);
+                        });
+                    }
+                    return response.json();
+                })
+                .then(result => {
+                    console.log(`Refresh successful for ${servicePath}:`, result);
+                    // UI update is handled by the WebSocket push triggered by the backend.
+                })
+                .catch(error => {
+                    console.error(`Failed to trigger refresh for ${servicePath}:`, error);
+                    alert(`Could not refresh service ${servicePath}: ${error.message}`);
+                })
+                .finally(() => {
+                    // Restore button state after a short delay to allow WS update if needed
+                    setTimeout(() => {
+                        refreshButton.innerHTML = originalIconHTML;
+                        // Find the current status from the badge title to decide if refresh button stays disabled
+                        const badgeId = 'status-badge-' + servicePath.replace(/^\//, '').replace(/\//g, '_').replace(/:/g, '_');
+                        const badge = document.getElementById(badgeId);
+                        if (badge && badge.title !== 'disabled') {
+                            refreshButton.disabled = false;
+                        }
+                    }, 300);
+                });
         }
 
         // =====================================================================
@@ -1168,96 +1678,121 @@
             }
         }
 
-        async function handleRefreshClick(event) {
-            const refreshButton = event.target.closest('.refresh-button');
-            if (!refreshButton || refreshButton.disabled) {
-                return; // Ignore clicks not on an enabled refresh button
-            }
-
-            event.preventDefault(); // Prevent any default button action if needed
-
-            const servicePath = refreshButton.dataset.path;
-            if (!servicePath) {
-                console.error("Refresh button missing data-path attribute.");
-                return;
-            }
-            console.log(`Refresh button clicked for path: ${servicePath}`);
-
-            // Indicate loading state
-            refreshButton.disabled = true;
-            const originalIconHTML = refreshButton.innerHTML;
-            // Use a simple spinner for loading feedback
-            refreshButton.innerHTML = '<span class="status-spinner" style="width: 0.9em; height: 0.9em; border-width: 2px; top: 0;"></span>';
-
-            try {
-                const response = await fetch(`/api/refresh${servicePath}`, { method: 'POST' });
-
-                if (!response.ok) {
-                    let errorMsg = `Error refreshing: ${response.status} ${response.statusText}`;
-                    try { const errorData = await response.json(); errorMsg = errorData.detail || errorMsg; } catch(e) {}
-                    throw new Error(errorMsg);
-                }
-
-                const result = await response.json();
-                console.log(`Refresh successful for ${servicePath}:`, result);
-                // UI update is handled by the WebSocket push triggered by the backend.
-
-            } catch (error) {
-                console.error(`Failed to trigger refresh for ${servicePath}:`, error);
-                alert(`Could not refresh service ${servicePath}: ${error.message}`);
-            } finally {
-                // Restore button state after a short delay to allow WS update if needed
-                setTimeout(() => {
-                    // Check if still disabled before re-enabling (WS might have disabled it)
-                    if (refreshButton.disabled) {
-                       // We might not always want to re-enable it here if the refresh failed
-                       // and the status remains error/disabled via WS.
-                       // Let's trust the WS update from updateServiceDisplay for the final disabled state.
-                       // Just restore the icon.
-                    }
-                    refreshButton.innerHTML = originalIconHTML;
-                    // Re-enable *only if* the WS didn't disable it.
-                    // Find the current status from the badge title to decide.
-                    const badgeId = 'status-badge-' + servicePath.replace(/^\//, '').replace(/\//g, '_').replace(/:/g, '_');
-                    const badge = document.getElementById(badgeId);
-                    if (badge && badge.title !== 'disabled') {
-                         refreshButton.disabled = false;
-                    }
-
-                }, 300); // Small delay
-            }
-        }
-
+        // --- Fix the theme toggle function to be more robust ---
         function handleThemeToggle() {
+            console.log("handleThemeToggle called");
             const htmlElement = document.documentElement;
-            const isDarkMode = htmlElement.classList.toggle('dark-mode');
-            localStorage.setItem('theme', isDarkMode ? 'dark' : 'light');
-            console.log('Theme toggled to:', isDarkMode ? 'dark' : 'light');
+            const wasDarkMode = htmlElement.classList.contains('dark-mode');
+            const newIsDarkMode = !wasDarkMode;
+            
+            console.log("Theme toggle state: was dark mode:", wasDarkMode, "→ new dark mode:", newIsDarkMode);
+            
+            if (newIsDarkMode) {
+                // Apply dark mode
+                htmlElement.classList.add('dark-mode');
+                htmlElement.setAttribute('data-theme', 'dark');
+                
+                // Force direct styles on key elements
+                document.body.style.backgroundColor = '#212529';
+                document.body.style.color = '#f8f9fa';
+                
+                // Force dark mode on specific elements
+                document.querySelectorAll('.main-header').forEach(el => {
+                    el.style.backgroundColor = '#212529';
+                    el.style.borderBottomColor = '#495057';
+                });
+                
+                document.querySelectorAll('.service-card').forEach(el => {
+                    el.style.backgroundColor = '#343a40';
+                    el.style.borderColor = '#495057';
+                });
+                
+                document.querySelectorAll('.sidebar').forEach(el => {
+                    el.style.backgroundColor = '#212529';
+                    el.style.color = '#f8f9fa';
+                });
+                
+                document.querySelectorAll('.card-header h2, .service-card .owner, .service-card .description').forEach(el => {
+                    el.style.color = '#f8f9fa';
+                });
+                
+                document.querySelectorAll('.sidebar-toggle-button, .theme-toggle-button, .logo span, .header-right .user-display').forEach(el => {
+                    el.style.color = '#f8f9fa';
+                });
+                
+                document.querySelectorAll('.content h1').forEach(el => {
+                    el.style.color = '#f8f9fa';
+                });
 
-            // Update the data-theme attribute consistently
-            if (isDarkMode) {
-                htmlElement.removeAttribute('data-theme'); // Remove light theme attribute
-                // Optional: htmlElement.setAttribute('data-theme', 'dark');
+                // Theme toggle button icon
+                const themeToggleButton = document.getElementById('theme-toggle');
+                if (themeToggleButton) {
+                    themeToggleButton.textContent = '☀️';
+                }
             } else {
-                htmlElement.setAttribute('data-theme', 'light'); // Add light theme attribute
+                // Apply light mode
+                htmlElement.classList.remove('dark-mode');
+                htmlElement.setAttribute('data-theme', 'light');
+                
+                // Force direct styles on key elements
+                document.body.style.backgroundColor = '#f8f9fa';
+                document.body.style.color = '#16191f';
+                
+                // Force light mode on specific elements
+                document.querySelectorAll('.main-header').forEach(el => {
+                    el.style.backgroundColor = '#ffffff';
+                    el.style.borderBottomColor = '#e0e0e0';
+                });
+                
+                document.querySelectorAll('.service-card').forEach(el => {
+                    el.style.backgroundColor = '#ffffff';
+                    el.style.borderColor = '#e0e0e0';
+                });
+                
+                document.querySelectorAll('.sidebar').forEach(el => {
+                    el.style.backgroundColor = '#f8f9fa';
+                    el.style.color = '#16191f';
+                });
+                
+                document.querySelectorAll('.card-header h2, .service-card .owner, .service-card .description').forEach(el => {
+                    el.style.color = '#16191f';
+                });
+                
+                document.querySelectorAll('.sidebar-toggle-button, .theme-toggle-button, .logo span, .header-right .user-display').forEach(el => {
+                    el.style.color = '#16191f';
+                });
+                
+                document.querySelectorAll('.content h1').forEach(el => {
+                    el.style.color = '#16191f';
+                });
+
+                // Theme toggle button icon
+                const themeToggleButton = document.getElementById('theme-toggle');
+                if (themeToggleButton) {
+                    themeToggleButton.textContent = '🌙';
+                }
             }
-            // Update button icon if needed (e.g., sun/moon) - requires icon elements
-            const themeToggleButton = document.getElementById('theme-toggle');
-            if (themeToggleButton) {
-                themeToggleButton.textContent = isDarkMode ? '☀️' : '🌙'; // Example icon change
-            }
+            
+            // Save the new state to localStorage
+            localStorage.setItem('theme', newIsDarkMode ? 'dark' : 'light');
+            
+            console.log("Theme toggled to:", newIsDarkMode ? 'dark' : 'light');
         }
 
         function handleSidebarToggle() {
             const bodyElement = document.body;
             const isCollapsed = bodyElement.classList.toggle('sidebar-collapsed');
-            localStorage.setItem('sidebarCollapsed', isCollapsed);
+            localStorage.setItem('sidebarCollapsed', isCollapsed ? 'true' : 'false');
             console.log(`Sidebar toggled. Collapsed: ${isCollapsed}`);
         }
 
         function handleModalOverlayClick(event) {
             if (event.target === document.getElementById('tool-modal')) {
                 closeToolModal();
+            }
+            // --- Add for Register Modal ---
+            if (event.target === document.getElementById('register-server-modal')) {
+                closeRegisterModal();
             }
         }
 
@@ -1287,66 +1822,322 @@
         document.addEventListener('DOMContentLoaded', () => {
             console.log("DOM fully loaded and parsed.");
 
-            // Initial UI setup
-            updateAllTimestamps(); // Format initial timestamps
-            adjustAllTitles(); // Adjust titles on initial load
-
-            // Start WebSocket connection
-            connectWebSocket(); // Handles ongoing UI updates
-
-            // Attach Event Listeners
-            const themeToggleButton = document.getElementById('theme-toggle');
-            if (themeToggleButton) {
-                 // Set initial icon based on loaded theme
-                 themeToggleButton.textContent = document.documentElement.classList.contains('dark-mode') ? '☀️' : '🌙';
-                 themeToggleButton.addEventListener('click', handleThemeToggle);
-            }
-
-            const sidebarToggleButton = document.getElementById('sidebar-toggle');
-             if (sidebarToggleButton) {
-                // Check local storage for initial sidebar state
-                if (localStorage.getItem('sidebarCollapsed') === 'true') {
-                    document.body.classList.add('sidebar-collapsed');
+            // Setup Global Event Delegation
+            // 1. Handle tool icon clicks via event delegation
+            document.addEventListener('click', function(event) {
+                // Check if the click was on a tool icon or its child
+                const toolIcon = event.target.closest('.clickable-tool-icon');
+                if (toolIcon) {
+                    const servicePath = toolIcon.dataset.path;
+                    const serviceName = toolIcon.dataset.name;
+                    if (servicePath && serviceName) {
+                        showToolModal(servicePath, serviceName);
+                    } else {
+                        console.error("Missing data attributes on tool icon", toolIcon);
+                    }
                 }
-                 sidebarToggleButton.addEventListener('click', handleSidebarToggle);
-             }
+                
+                // Handle refresh button clicks
+                const refreshButton = event.target.closest('.refresh-button');
+                if (refreshButton && !refreshButton.disabled) {
+                    event.preventDefault();
+                    
+                    const servicePath = refreshButton.dataset.path;
+                    if (!servicePath) {
+                        console.error("Refresh button missing data-path attribute.");
+                        return;
+                    }
+                    
+                    // Indicate loading state
+                    refreshButton.disabled = true;
+                    const originalIconHTML = refreshButton.innerHTML;
+                    refreshButton.innerHTML = '<span class="status-spinner" style="width: 0.9em; height: 0.9em; border-width: 2px; top: 0;"></span>';
+                    
+                    // Make the refresh API call
+                    fetch(`/api/refresh${servicePath}`, { method: 'POST' })
+                        .then(response => {
+                            if (!response.ok) {
+                                return response.json().then(data => {
+                                    throw new Error(data.detail || `Error refreshing: ${response.status} ${response.statusText}`);
+                                }).catch(e => {
+                                    throw new Error(`Error refreshing: ${response.status} ${response.statusText}`);
+                                });
+                            }
+                            return response.json();
+                        })
+                        .then(result => {
+                            console.log(`Refresh successful for ${servicePath}:`, result);
+                        })
+                        .catch(error => {
+                            console.error(`Failed to trigger refresh for ${servicePath}:`, error);
+                            alert(`Could not refresh service ${servicePath}: ${error.message}`);
+                        })
+                        .finally(() => {
+                            setTimeout(() => {
+                                refreshButton.innerHTML = originalIconHTML;
+                                const badgeId = 'status-badge-' + servicePath.replace(/^\//, '').replace(/\//g, '_').replace(/:/g, '_');
+                                const badge = document.getElementById(badgeId);
+                                if (badge && badge.title !== 'disabled') {
+                                    refreshButton.disabled = false;
+                                }
+                            }, 300);
+                        });
+                }
+                
+                // Handle theme toggle button clicks
+                if (event.target.closest('#theme-toggle')) {
+                    handleThemeToggle();
+                }
+            });
+            
+            // 2. Handle toggle changes via event delegation
+            document.addEventListener('change', function(event) {
+                if (event.target.matches('.toggle-checkbox')) {
+                    const checkboxElement = event.target;
+                    const servicePath = checkboxElement.dataset.path;
+                    
+                    if (!servicePath) {
+                        console.error("Missing data-path attribute on toggle checkbox");
+                        return;
+                    }
+                    
+                    event.preventDefault(); // Prevent default form submission
+                    
+                    const safePath = servicePath.replace(/^\//, '').replace(/\//g, '_').replace(/:/g, '_');
+                    const spinnerId = 'spinner-for-' + safePath;
+                    const spinner = document.getElementById(spinnerId);
+                    const form = checkboxElement.form;
+                    const isEnabling = checkboxElement.checked;
+                    
+                    if (spinner) {
+                        spinner.style.display = 'inline-block';
+                    }
+                    checkboxElement.disabled = true;
+                    
+                    const formData = new FormData();
+                    if (isEnabling) {
+                        formData.append('enabled', 'on');
+                    }
+                    
+                    fetch(form.action, {
+                        method: 'POST',
+                        body: new URLSearchParams(formData)
+                    })
+                    .then(response => response.json())
+                    .then(responseData => {
+                        console.log(`Toggle request successful for ${servicePath}. Backend response:`, responseData);
+                    })
+                    .catch(error => {
+                        console.error(`Network or fetch error toggling service ${servicePath}:`, error);
+                        alert(`Failed to send toggle request: ${error}`);
+                    });
+                }
+            });
+            
+            // 3. Sidebar filter click handling
+            document.addEventListener('click', function(event) {
+                const link = event.target.closest('.sidebar-link[data-filter]');
+                if (link) {
+                    event.preventDefault();
+                    
+                    const filterType = link.dataset.filter;
+                    
+                    // Update active link style
+                    document.querySelectorAll('.sidebar-nav .sidebar-link').forEach(l => {
+                        l.classList.remove('active-filter');
+                    });
+                    link.classList.add('active-filter');
+                    
+                    // Apply the filter
+                    applyCardFilter(filterType);
+                }
+            });
+            
+            // 4. Modal overlay clicks (close when clicking outside)
+            document.querySelectorAll('.modal-overlay').forEach(modal => {
+                modal.addEventListener('click', function(event) {
+                    if (event.target === this) {
+                        if (this.id === 'tool-modal') closeToolModal();
+                        if (this.id === 'register-server-modal') closeRegisterModal();
+                    }
+                });
+            });
+            
+            // 5. Handle register server button
+            const registerButton = document.getElementById('register-server-button');
+            if (registerButton) {
+                registerButton.addEventListener('click', showRegisterModal);
+            }
+            
+            // 6. Tab switching in register modal
+            document.querySelectorAll('.registration-tabs .tab-button').forEach(button => {
+                button.addEventListener('click', function() {
+                    switchRegisterTab(this.dataset.tab);
+                });
+            });
+            
+            // 7. Handle sidebar toggle
+            const sidebarToggle = document.getElementById('sidebar-toggle');
+            if (sidebarToggle) {
+                sidebarToggle.addEventListener('click', handleSidebarToggle);
+            }
+            
+            // 8. Close modals with ESC key
+            document.addEventListener('keydown', function(e) {
+                if (e.key === 'Escape') {
+                    const toolModal = document.getElementById('tool-modal');
+                    if (toolModal && toolModal.style.display !== 'none') {
+                        closeToolModal();
+                    }
+                    
+                    const registerModal = document.getElementById('register-server-modal');
+                    if (registerModal && registerModal.style.display !== 'none') {
+                        closeRegisterModal();
+                    }
+                }
+            });
 
-            const toolModalOverlay = document.getElementById('tool-modal');
-            if (toolModalOverlay) {
-                toolModalOverlay.addEventListener('click', handleModalOverlayClick);
+            // Register form handling
+            const registerForm = document.getElementById('register-server-form');
+            if (registerForm) {
+                registerForm.addEventListener('submit', function(event) {
+                    event.preventDefault();
+                    const formData = new FormData(this);
+                    
+                    // FastAPI expects 'true' or empty for boolean fields
+                    if (!formData.has('is_python')) {
+                        formData.append('is_python', '');
+                    }
+                    
+                    handleRegistrationSubmit(formData);
+                });
+            }
+            
+            // Set initial theme state
+            const savedTheme = localStorage.getItem('theme');
+            const themeToggle = document.getElementById('theme-toggle');
+            if (savedTheme) {
+                if (savedTheme === 'dark') {
+                    document.documentElement.classList.add('dark-mode');
+                    if (themeToggle) themeToggle.textContent = '☀️';
+            } else {
+                    document.documentElement.classList.remove('dark-mode');
+                    document.documentElement.setAttribute('data-theme', 'light');
+                    if (themeToggle) themeToggle.textContent = '🌙';
+                }
             }
 
-             // Delegated event listener for refresh buttons
-             document.addEventListener('click', handleRefreshClick);
-
-             // Delegated event listener for sidebar filter links
-             const sidebarNav = document.querySelector('.sidebar-nav');
-             if (sidebarNav) {
-                 sidebarNav.addEventListener('click', handleFilterClick);
-             }
-
-             // Add debounced resize listener for title adjustments
-             window.addEventListener('resize', debounce(adjustAllTitles, 150));
-
-             // Apply initial filter state
-             applyCardFilter('all'); // Show all cards initially
-
-             // Initialize sidebar stats based on initial page render
-             // Build initial map from rendered data (less efficient, but works before WS)
-             const initialStatusMap = {};
-             document.querySelectorAll('.service-card').forEach(card => {
-                 const path = card.querySelector('.refresh-button')?.dataset.path;
-                 const badge = card.querySelector('.status-badge');
-                 if(path && badge) {
-                     initialStatusMap[path] = { status: badge.title, num_tools: 0 }; // num_tools unknown here
-                 }
-             });
-             updateSidebarStats(initialStatusMap);
-
-             // Note: Toggle change handler is attached inline via onchange="handleToggleClick(...)"
-             // Note: Tool modal click handler is attached inline via onclick="showToolModal(...)"
+            // Initialize the UI components
+            updateAllTimestamps();
+            applyThemeOnLoad(); // Add this line
+            applyCardFilter('all');
+            
+            // Initialize sidebar state from localStorage
+            if (localStorage.getItem('sidebarCollapsed') === 'true') {
+                document.body.classList.add('sidebar-collapsed');
+            }
+            
+            // Connect WebSocket
+            connectWebSocket();
         });
 
+        // Replace the existing theme initialization function at the top
+        (function() {
+            const savedTheme = localStorage.getItem('theme');
+            const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+            // Use saved theme if available, otherwise respect user's OS preference
+            const theme = savedTheme || (prefersDark ? 'dark' : 'light');
+            console.log('[HEAD SCRIPT] Initial theme setup:', theme, 'from:', savedTheme ? 'localStorage' : 'OS preference');
+            
+            const htmlElement = document.documentElement;
+            if (theme === 'dark') {
+                htmlElement.classList.add('dark-mode');
+                htmlElement.setAttribute('data-theme', 'dark');
+            } else {
+                htmlElement.classList.remove('dark-mode');
+                htmlElement.setAttribute('data-theme', 'light');
+            }
+        })();
+
+        // Add this to the DOMContentLoaded event listener near the bottom
+        // Add this after updateAllTimestamps() and before applyCardFilter()
+        function applyThemeOnLoad() {
+            const savedTheme = localStorage.getItem('theme');
+            if (savedTheme === 'dark') {
+                // Apply dark mode styles directly
+                document.body.style.backgroundColor = '#212529';
+                document.body.style.color = '#f8f9fa';
+                
+                // Force dark mode on specific elements
+                document.querySelectorAll('.main-header').forEach(el => {
+                    el.style.backgroundColor = '#212529';
+                    el.style.borderBottomColor = '#495057';
+                });
+                
+                document.querySelectorAll('.service-card').forEach(el => {
+                    el.style.backgroundColor = '#343a40';
+                    el.style.borderColor = '#495057';
+                });
+                
+                document.querySelectorAll('.sidebar').forEach(el => {
+                    el.style.backgroundColor = '#212529';
+                    el.style.color = '#f8f9fa';
+                });
+                
+                document.querySelectorAll('.card-header h2, .service-card .owner, .service-card .description').forEach(el => {
+                    el.style.color = '#f8f9fa';
+                });
+                
+                document.querySelectorAll('.sidebar-toggle-button, .theme-toggle-button, .logo span, .header-right .user-display').forEach(el => {
+                    el.style.color = '#f8f9fa';
+                });
+                
+                document.querySelectorAll('.content h1').forEach(el => {
+                    el.style.color = '#f8f9fa';
+                });
+                
+                // Theme toggle button icon
+                const themeToggle = document.getElementById('theme-toggle');
+                if (themeToggle) themeToggle.textContent = '☀️';
+            } else {
+                // Apply light mode styles directly
+                document.body.style.backgroundColor = '#f8f9fa';
+                document.body.style.color = '#16191f';
+                
+                // Force light mode on specific elements
+                document.querySelectorAll('.main-header').forEach(el => {
+                    el.style.backgroundColor = '#ffffff';
+                    el.style.borderBottomColor = '#e0e0e0';
+                });
+                
+                document.querySelectorAll('.service-card').forEach(el => {
+                    el.style.backgroundColor = '#ffffff';
+                    el.style.borderColor = '#e0e0e0';
+                });
+                
+                document.querySelectorAll('.sidebar').forEach(el => {
+                    el.style.backgroundColor = '#f8f9fa';
+                    el.style.color = '#16191f';
+                });
+                
+                document.querySelectorAll('.card-header h2, .service-card .owner, .service-card .description').forEach(el => {
+                    el.style.color = '#16191f';
+                });
+                
+                document.querySelectorAll('.sidebar-toggle-button, .theme-toggle-button, .logo span, .header-right .user-display').forEach(el => {
+                    el.style.color = '#16191f';
+                });
+                
+                document.querySelectorAll('.content h1').forEach(el => {
+                    el.style.color = '#16191f';
+                });
+                
+                // Theme toggle button icon
+                const themeToggle = document.getElementById('theme-toggle');
+                if (themeToggle) themeToggle.textContent = '🌙';
+            }
+            console.log('[applyThemeOnLoad] Theme applied:', savedTheme);
+        }
     </script>
 </head>
 <body>
@@ -1361,6 +2152,9 @@
             </div>
         </div>
         <div class="header-right">
+            {% if username %}
+            <button id="register-server-button" class="secondary-button" style="margin-right: 10px; padding: 8px 16px; font-weight: 600; border-radius: 8px;">Register Server</button>
+            {% endif %}
             <button id="theme-toggle" class="theme-toggle-button" title="Toggle Theme">🌙</button>
             <span class="user-display">User: {{ username }}</span>
             <form action="/logout" method="post" style="display: inline;">
@@ -1505,11 +2299,12 @@
                                 {# Add ID to form if needed, but action URL is sufficient #}
                                 <form action="/toggle{{ service.path }}" method="post" class="toggle-form">
                                     <label class="switch">
-                                        {# Pass event, element, and path; add ID to checkbox #}
+                                        {# Change onchange to use data attributes instead #}
                                         <input type="checkbox" name="enabled" value="on"
                                                id="{{ 'toggle-check-' + safe_path }}"
                                                {% if service.is_enabled %}checked{% endif %}
-                                               onchange="handleToggleClick(event, this, '{{ service.path }}')">
+                                               data-path="{{ service.path }}"
+                                               class="toggle-checkbox">
                                         <span class="slider round"></span>
                                     </label>
                                     {# Add ID to label span #}
@@ -1529,13 +2324,13 @@
                             </span>
                             {# Use the consistent safe_path variable defined earlier #}
                             {% set num_tools_id = 'num-tools-' + safe_path %}
-                            <span id="{{ num_tools_id }}" class="metadata clickable-tool-icon" onclick="showToolModal('{{ service.path }}', '{{ service.display_name }}')" title="Click to view tools">🔧 {{ service.num_tools }}</span>
+                            <span id="{{ num_tools_id }}" class="metadata clickable-tool-icon" data-path="{{ service.path }}" data-name="{{ service.display_name }}" title="Click to view tools">🔧 {{ service.num_tools }}</span>
                             <span class="metadata">⭐ {{ service.num_stars }}</span>
                             <div class="platform-icons">
                                  {% if service.is_python %}<span>🐍 Python</span>{% endif %}
                                  <span>⚖️ {{ service.license }}</span>
                                  <!-- Consider adding OS icons dynamically if needed -->
-                                 <span>🐧</span> <span></span> <span>🪟</span>
+                                 <span>🐧</span> <span></span> <span>🪟</span>
                             </div>
                         </div>
                     </div>
@@ -1561,16 +2356,342 @@
     </div>
     <!-- End Tool List Modal -->
 
-    <script>
-        // Moved DOMContentLoaded listener to the end of the script block
-        document.addEventListener('DOMContentLoaded', () => {
-            // Ensure all functions above are defined before calling them
-            connectWebSocket();
-            updateAllTimestamps(); // Initial format based on Jinja render
-            // setInterval(updateAllTimestamps, 5000); // Keep this commented out for now
-        });
-    </script>
+    <!-- Register Server Modal -->
+    <div id="register-server-modal" class="modal-overlay" style="display: none;">
+        <div class="modal-content">
+            <span class="modal-close-button" onclick="closeRegisterModal()">&times;</span>
+            <h3>Register New Server</h3>
 
-    <!-- Add Theme Toggle Script -->
-</body>
-</html>
+            <div class="registration-tabs">
+                <button class="tab-button active" data-tab="form">Fill Form</button>
+                <button class="tab-button" data-tab="upload">Upload JSON</button>
+                <button class="tab-button" data-tab="paste">Paste JSON</button>
+            </div>
+
+            <!-- Tab Content: Fill Form -->
+            <div id="tab-form" class="tab-content active">
+                <h4>Register by Filling Form</h4>
+                <form id="register-server-form">
+                    <div class="form-group">
+                        <label for="reg-name">Server Name <span style="color:red;">*</span></label>
+                        <input type="text" id="reg-name" name="name" class="form-input" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="reg-path">Path <span style="color:red;">*</span> (e.g., /my-service)</label>
+                        <input type="text" id="reg-path" name="path" class="form-input" required pattern="^/.*" title="Path must start with /">
+                    </div>
+                    <div class="form-group">
+                        <label for="reg-proxy-pass-url">Proxy Pass URL <span style="color:red;">*</span> (e.g., http://localhost:8001)</label>
+                        <input type="url" id="reg-proxy-pass-url" name="proxy_pass_url" class="form-input" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="reg-description">Description</label>
+                        <textarea id="reg-description" name="description" class="form-input" rows="3"></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label for="reg-tags">Tags (comma-separated)</label>
+                        <input type="text" id="reg-tags" name="tags" class="form-input">
+                    </div>
+                     <div class="form-group">
+                        <label for="reg-num-stars">Stars</label>
+                        <input type="number" id="reg-num-stars" name="num_stars" class="form-input" value="0" min="0">
+                    </div>
+                    <div class="form-group">
+                        <label for="reg-license">License</label>
+                        <input type="text" id="reg-license" name="license" class="form-input" value="N/A">
+                    </div>
+                    <div class="form-group">
+                        <input type="checkbox" id="reg-is-python" name="is_python" value="true"> <!-- Value 'true' is important for FastAPI -->
+                        <label for="reg-is-python" style="display: inline; font-weight: normal;">Is Python based?</label>
+                    </div>
+                    <button type="submit" class="edit-button">Register Server</button>
+                </form>
+            </div>
+
+            <!-- Tab Content: Upload JSON -->
+            <div id="tab-upload" class="tab-content">
+                <h4>Register by Uploading JSON File</h4>
+                <form id="upload-json-form">
+                    <div class="form-group">
+                        <label for="json-file-input">Select JSON File</label>
+                        <input type="file" id="json-file-input" name="json_file" class="form-input" accept=".json" required>
+                    </div>
+                    <button type="submit" class="edit-button">Upload and Register</button>
+                </form>
+            </div>
+
+            <!-- Tab Content: Paste JSON -->
+            <div id="tab-paste" class="tab-content">
+                <h4>Register by Pasting JSON</h4>
+                <form id="paste-json-form">
+                    <div class="form-group">
+                        <label for="json-paste-area">Paste JSON content here</label>
+                        <textarea id="json-paste-area" class="form-input" rows="10" required placeholder='''{
+    "server_name": "My Awesome Service",
+    "path": "/my-awesome-service",
+    "proxy_pass_url": "http://localhost:8080",
+    "description": "This is a great service.",
+    "tags": ["awesome", "example"],
+    "num_stars": 5,
+    "is_python": true,
+    "license": "MIT"
+}'''></textarea>
+                    </div>
+                    <button type="submit" class="edit-button">Paste and Register</button>
+                </form>
+            </div>
+
+            <div id="registration-feedback" style="display:none; padding: 10px; margin-top: 15px; border-radius: 5px;"></div>
+        </div>
+    </div>
+
+    <script>
+        // Move all scripting here to ensure functions are defined before they're used
+        document.addEventListener('DOMContentLoaded', () => {
+            console.log("DOM fully loaded and parsed.");
+
+            // =====================================================================
+            // == Event Handlers
+            // =====================================================================
+
+            // Handle toggle click
+            async function handleToggleClick(event) {
+                const checkboxElement = event.target;
+                const servicePath = checkboxElement.dataset.path;
+                
+                if (!servicePath) {
+                    console.error("Missing data-path attribute on toggle checkbox");
+                    return;
+                }
+                
+                event.preventDefault(); // Prevent default form submission
+                console.log(`Toggle clicked for path: ${servicePath}`);
+
+                const safePath = servicePath.replace(/^\//, '').replace(/\//g, '_').replace(/:/g, '_');
+                const spinnerId = 'spinner-for-' + safePath;
+                const spinner = document.getElementById(spinnerId);
+                const form = checkboxElement.form;
+                const isEnabling = checkboxElement.checked; // The state the user wants to set
+
+                // Show spinner and disable checkbox immediately for feedback
+                if (spinner) {
+                    spinner.style.display = 'inline-block';
+                } else {
+                    console.warn(`Spinner element not found for ID: ${spinnerId}`);
+                }
+                checkboxElement.disabled = true;
+
+                // Prepare form data
+                const formData = new FormData();
+                if (isEnabling) {
+                    formData.append('enabled', 'on');
+                }
+
+                try {
+                    const response = await fetch(form.action, {
+                        method: 'POST',
+                        body: new URLSearchParams(formData) // Send as x-www-form-urlencoded
+                    });
+
+                    const responseData = await response.json(); // Always try to parse JSON
+
+                    if (!response.ok) {
+                        // Log error from backend response if possible
+                        const errorMsg = responseData.detail || `HTTP error ${response.status}`;
+                        console.error(`Error toggling service ${servicePath}: ${errorMsg}`);
+                        alert(`Error toggling service: ${errorMsg}`);
+                    } else {
+                        console.log(`Toggle request successful for ${servicePath}. Backend response:`, responseData);
+                    }
+
+                } catch (error) {
+                    console.error(`Network or fetch error toggling service ${servicePath}:`, error);
+                    alert(`Failed to send toggle request: ${error}`);
+                }
+            }
+
+            // Show tool modal
+            async function showToolModal(servicePath, serviceName) {
+                const toolModal = document.getElementById('tool-modal');
+                const toolModalTitle = document.getElementById('tool-modal-title');
+                const toolModalListContainer = document.getElementById('tool-modal-list-container');
+
+                if (!toolModal || !toolModalTitle || !toolModalListContainer) {
+                    console.error("Tool modal elements not found!"); return;
+                }
+
+                toolModalTitle.textContent = `Tools for ${serviceName}`;
+                toolModalListContainer.innerHTML = '<p>Loading...</p>';
+                toolModal.style.display = 'flex';
+
+                // Ensure the path is properly formatted with leading slash
+                const apiPath = servicePath.startsWith('/') ? servicePath : '/' + servicePath;
+                
+                // Explicitly construct the full URL through the gateway/proxy, NOT direct to port 7860
+                const proxyUrl = window.location.origin + '/api/tools' + apiPath;
+                console.log(`Fetching tools from: ${proxyUrl}`);
+                
+                // Use fetch with proper error handling
+                fetch(proxyUrl, {
+                    method: 'GET',
+                    credentials: 'same-origin'
+                })
+                    .then(response => {
+                        console.log(`Tool fetch response: ${response.status} ${response.statusText}`);
+                        if (!response.ok) {
+                            return response.json().then(data => {
+                                throw new Error(data.detail || `Error: ${response.status} ${response.statusText}`);
+                            }).catch(e => {
+                                throw new Error(`Error: ${response.status} ${response.statusText}`);
+                            });
+                        }
+                        return response.json();
+                    })
+                    .then(data => {
+                        console.log(`Tool data received:`, data);
+                        toolModalListContainer.innerHTML = '';
+                        
+                        const tools = data.tools || [];
+                        
+                        if (tools && tools.length > 0) {
+                            tools.forEach(tool => {
+                                const toolDiv = document.createElement('div');
+                                toolDiv.style.marginBottom = '15px';
+                                toolDiv.style.borderBottom = '1px solid var(--card-border)';
+                                toolDiv.style.paddingBottom = '10px';
+
+                                const nameEl = document.createElement('h4');
+                                nameEl.textContent = tool.name || 'Unnamed Tool';
+                                nameEl.style.marginTop = '0'; nameEl.style.marginBottom = '5px';
+                                toolDiv.appendChild(nameEl);
+
+                                // Render Parsed Description
+                                if (tool.parsed_description) {
+                                    const mainDescEl = document.createElement('p');
+                                    mainDescEl.textContent = tool.parsed_description.main || 'No description available.';
+                                    mainDescEl.style.whiteSpace = 'pre-wrap';
+                                    toolDiv.appendChild(mainDescEl);
+
+                                    const renderSection = (title, content) => {
+                                        if (!content) return;
+                                        const titleEl = document.createElement('strong');
+                                        titleEl.textContent = title + ':';
+                                        titleEl.style.display = 'block'; titleEl.style.marginTop = '8px';
+                                        toolDiv.appendChild(titleEl);
+                                        const preEl = document.createElement('pre');
+                                        preEl.textContent = content;
+                                        preEl.style.marginLeft = '10px'; preEl.style.marginTop = '3px';
+                                        preEl.style.whiteSpace = 'pre-wrap'; preEl.style.fontSize = '0.9em';
+                                        toolDiv.appendChild(preEl);
+                                    };
+                                    renderSection('Args', tool.parsed_description.args);
+                                    renderSection('Returns', tool.parsed_description.returns);
+                                    renderSection('Raises', tool.parsed_description.raises);
+                                } else if (tool.description) { // Fallback
+                                    const descEl = document.createElement('p');
+                                    descEl.textContent = tool.description;
+                                    descEl.style.marginBottom = '8px';
+                                    toolDiv.appendChild(descEl);
+                                }
+
+                                // Render Schema
+                                if (tool.schema && typeof tool.schema === 'object' && Object.keys(tool.schema).length > 0) {
+                                    const schemaContainer = document.createElement('div');
+                                    schemaContainer.style.marginTop = '10px';
+                                    schemaContainer.innerHTML = '<strong>Input Schema:</strong>';
+
+                                    const properties = tool.schema.properties;
+                                    const required = tool.schema.required || [];
+
+                                    if (properties && typeof properties === 'object' && Object.keys(properties).length > 0) {
+                                        const propsList = document.createElement('div');
+                                        propsList.style.marginLeft = '15px'; propsList.style.marginTop = '5px';
+                                        propsList.style.borderLeft = '2px solid var(--card-border)'; propsList.style.paddingLeft = '10px';
+
+                                        for (const [propName, propDetails] of Object.entries(properties)) {
+                                            const propDiv = document.createElement('div');
+                                            propDiv.style.marginBottom = '8px';
+
+                                            const nameSpan = document.createElement('strong');
+                                            nameSpan.textContent = propName;
+                                            propDiv.appendChild(nameSpan);
+
+                                            if (required.includes(propName)) {
+                                                const reqSpan = document.createElement('span');
+                                                reqSpan.textContent = ' (required)'; reqSpan.style.color = '#dc3545';
+                                                reqSpan.style.fontSize = '0.8em'; reqSpan.style.marginLeft = '3px';
+                                                propDiv.appendChild(reqSpan);
+                                            }
+                                            if (propDetails.type) {
+                                                const typeSpan = document.createElement('span');
+                                                typeSpan.textContent = ` - Type: ${propDetails.type}`;
+                                                typeSpan.style.color = 'var(--input-placeholder)'; typeSpan.style.marginLeft = '5px';
+                                                propDiv.appendChild(typeSpan);
+                                            }
+                                            if (propDetails.description) {
+                                                const descP = document.createElement('p');
+                                                descP.textContent = propDetails.description;
+                                                descP.style.margin = '3px 0 0 10px'; descP.style.fontSize = '0.85em';
+                                                propDiv.appendChild(descP);
+                                            }
+                                            if (propDetails.default !== undefined) {
+                                                const defaultP = document.createElement('p');
+                                                defaultP.textContent = `Default: ${JSON.stringify(propDetails.default)}`;
+                                                defaultP.style.margin = '3px 0 0 10px'; defaultP.style.fontSize = '0.85em';
+                                                defaultP.style.color = 'var(--input-placeholder)';
+                                                propDiv.appendChild(defaultP);
+                                            }
+                                            propsList.appendChild(propDiv);
+                                        }
+                                        schemaContainer.appendChild(propsList);
+                                    } else {
+                                        schemaContainer.innerHTML += '<p style="margin-left: 15px; font-style: italic;">No input parameters defined.</p>';
+                                    }
+                                    // Optionally display $defs notice
+                                    if (tool.schema.$defs && Object.keys(tool.schema.$defs).length > 0) {
+                                        schemaContainer.innerHTML += '<p style="margin-top: 10px; font-size: 0.8em; color: var(--input-placeholder);"><strong>Definitions:</strong> (Schema uses shared definitions not fully displayed here)</p>';
+                                    }
+                                    toolDiv.appendChild(schemaContainer);
+                                } else if (tool.schema && Object.keys(tool.schema).length === 0){
+                                    toolDiv.innerHTML += '<p style="margin-top: 10px; font-style: italic;"><strong>Input Schema:</strong> No parameters defined.</p>';
+                                }
+                                toolModalListContainer.appendChild(toolDiv);
+                            });
+                        } else {
+                            toolModalListContainer.innerHTML = `
+                                <p>No tools listed for this service.</p>
+                                <p style="font-size: 0.9em; color: #6c757d; margin-top: 10px;">
+                                    Service reports ${data.tools ? data.tools.length : 0} tools.
+                                    <br>API path: ${apiPath}
+                                    <br>Last response: ${new Date().toLocaleTimeString()}
+                                </p>
+                            `;
+                        }
+                    })
+                    .catch(error => {
+                        console.error("Failed to fetch or display tools:", error);
+                        toolModalListContainer.innerHTML = `<p style="color: red;">Could not load tools: ${error.message}</p>`;
+                    });
+            }
+
+            // =====================================================================
+            // == Core UI Update Functions
+            // =====================================================================
+
+            function formatTimeAgoJS(isoString) {
+                if (!isoString) return "Never";
+                try {
+                    const dt = new Date(isoString);
+                    if (isNaN(dt.getTime())) {
+                        console.error(`[formatTimeAgoJS] Invalid Date parsed from: ${isoString}`);
+                        return "Invalid date";
+                    }
+                    const now = new Date();
+                    const diff = now.getTime() - dt.getTime();
+                    const seconds = Math.floor(diff / 1000);
+                    if (seconds < 2) return "Just now";
+                    if (seconds < 60) return `${seconds}s ago`;
+                    const minutes = Math.floor(seconds / 60);
+                    if (minutes < 60) return `${minutes}m ago`;
+                    const hours = Math.floor(minutes / 60);
+                    if (hours < 24) return `${hours}h ago`;
