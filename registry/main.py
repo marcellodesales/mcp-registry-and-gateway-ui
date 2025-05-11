@@ -1161,6 +1161,10 @@ async def login_form(request: Request, error: str | None = None):
 async def login_submit(
     username: Annotated[str, Form()], password: Annotated[str, Form()]
 ):
+    # cu = os.environ.get("ADMIN_USER", "admin")
+    # cp = os.environ.get("ADMIN_PASSWORD", "password")
+    # logger.info(f"Login attempt with username: {username}, {cu}")
+    # logger.info(f"Login attempt with password: {password}, {cp}")
     correct_username = secrets.compare_digest(
         username, os.environ.get("ADMIN_USER", "admin")
     )

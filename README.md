@@ -318,3 +318,8 @@ See the full API spec [here](docs/registry_api.md).
 1. Add OAUTH 2.1 support to Gateway and Registry.
 1. Use GitHub API to retrieve information (license, programming language etc.) about MCP servers.
 1. Add option to deploy MCP servers.
+
+## License
+
+- Free for non-commercial use under AGPL-3.0
+- Commercial use requires a paid license
