@@ -345,9 +345,14 @@ async def broadcast_health_status():
                     active_connections.remove(conn)
 
 # Session management configuration
-SECRET_KEY = os.environ.get("SECRET_KEY", "insecure-default-key-for-testing-only")
-if SECRET_KEY == "insecure-default-key-for-testing-only":
-    logger.warning("Using insecure default SECRET_KEY. Set a strong SECRET_KEY environment variable for production.")
+# Session management configuration
+SECRET_KEY = os.environ.get("SECRET_KEY")
+if not SECRET_KEY:
+    # Generate a secure random key (32 bytes = 256 bits of entropy)
+    SECRET_KEY = secrets.token_hex(32)
+    logger.warning("No SECRET_KEY environment variable found. Using a randomly generated key. "
+                   "While this is more secure than a hardcoded default, it will change on restart. "
+                   "Set a permanent SECRET_KEY environment variable for production.")
 SESSION_COOKIE_NAME = "mcp_gateway_session"
 signer = URLSafeTimedSerializer(SECRET_KEY)
 SESSION_MAX_AGE_SECONDS = 60 * 60 * 8  # 8 hours
@@ -470,7 +475,7 @@ def regenerate_nginx_config():
         # --- Reload Nginx --- START
         try:
             logger.info("Attempting to reload Nginx configuration...")
-            result = subprocess.run(['nginx', '-s', 'reload'], check=True, capture_output=True, text=True)
+            result = subprocess.run(['/usr/sbin/nginx', '-s', 'reload'], check=True, capture_output=True, text=True)
             logger.info(f"Nginx reload successful. stdout: {result.stdout.strip()}")
             return True
         except FileNotFoundError:

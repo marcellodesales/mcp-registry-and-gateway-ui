@@ -175,7 +175,7 @@ def get_stock_aggregates(
     retry_count = 0
     while retry_count < Constants.MAX_RETRIES:
         try:
-            response = requests.get(url, params=query_params)
+            response = requests.get(url, params=query_params, timeout=10)
             response.raise_for_status()  # Raise exception for 4XX/5XX responses
 
             # Return the JSON response

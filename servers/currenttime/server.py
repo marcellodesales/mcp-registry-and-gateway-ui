@@ -104,7 +104,7 @@ def current_time_by_timezone(
 
     for attempt in range(max_retries):
         try:
-            response = requests.get(url, headers=headers, params=params_dict)
+            response = requests.get(url, headers=headers, params=params_dict, timeout=10)
             response.raise_for_status()  # Raise an exception for 4XX/5XX responses
 
             # Return the JSON response as a string

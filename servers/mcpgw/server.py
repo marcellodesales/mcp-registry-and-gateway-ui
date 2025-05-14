@@ -197,8 +197,11 @@ async def _ensure_authenticated(credentials: Credentials):
                             raise Exception("Authentication failed: Session cookie not found.")
                 except httpx.HTTPStatusError as e:
                     error_detail = f"HTTP Status {e.response.status_code}"
-                    try: error_detail += f" - Detail: {e.response.json().get('detail', 'N/A')}" 
-                    except: pass
+                    try:
+                        error_detail += f" - Detail: {e.response.json().get('detail', 'N/A')}"
+                    except Exception as json_error:
+                        # Log attempt to extract JSON details failed, but continue with basic error info
+                        logger.debug(f"MCPGW: Could not extract error details from JSON response: {json_error}")
                     logger.error(f"MCPGW: Authentication failed: {error_detail}")
                     raise Exception(f"Authentication failed: {error_detail}") from e
                 except httpx.RequestError as e:
@@ -409,8 +412,9 @@ async def _call_registry_api(method: str, endpoint: str, credentials: Credential
                 error_detail = "No specific error detail provided."
                 try:
                     error_detail = e.response.json().get("detail", error_detail)
-                except Exception:
-                    pass
+                except Exception as json_error:
+                    # Log that we couldn't get detailed error from JSON, but continue with existing error info
+                    logger.debug(f"MCPGW: Could not extract detailed error from response: {json_error}")
                 raise Exception(f"Registry API Error ({e.response.status_code}): {error_detail} for {method} {url}") from e
         except httpx.RequestError as e:
             # Network or connection error during the API call
