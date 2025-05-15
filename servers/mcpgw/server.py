@@ -630,7 +630,7 @@ async def healthcheck() -> Dict[str, Any]:
 
 
 @mcp.tool()
-async def find_intelligent_tool(
+async def intelligent_tool_finder(
     natural_language_query: str = Field(..., description="Your query in natural language describing the task you want to perform."),
     username: str = Field(..., description="Username for mcpgw server authentication (if configured for this tool). Currently informational."),
     password: str = Field(..., description="Password for mcpgw server authentication (if configured for this tool). Currently informational."),
@@ -660,7 +660,7 @@ async def find_intelligent_tool(
 
     # Ensure FAISS data and model are loaded
     if _embedding_model_mcpgw is None or _faiss_index_mcpgw is None or _faiss_metadata_mcpgw is None:
-        logger.info("MCPGW: FAISS data or model not yet loaded. Attempting to load now for find_intelligent_tool...")
+        logger.info("MCPGW: FAISS data or model not yet loaded. Attempting to load now for intelligent_tool_finder...")
         await load_faiss_data_for_mcpgw()
 
     if _embedding_model_mcpgw is None:
