@@ -25,7 +25,7 @@ from typing import Dict, List, Any, Optional
 from urllib.parse import urlparse, urljoin
 from langchain_mcp_adapters.client import MultiServerMCPClient
 from langgraph.prebuilt import create_react_agent
-from langchain_aws import ChatBedrock
+from langchain_aws import ChatBedrock, ChatBedrockConverse
 from langchain_core.tools import tool
 import mcp
 from mcp import ClientSession
@@ -142,9 +142,12 @@ async def invoke_mcp_tool(mcp_registry_url: str, server_name: str, tool_name: st
     except Exception as e:
         return f"Error invoking MCP tool: {str(e)}"
 
+from datetime import datetime
+current_utc_time = str(datetime.utcnow())
 SYSTEM_PROMPT = """
 <instructions>
 You are a highly capable AI assistant designed to solve a wide range of problems for users. You have access to a variety of built-in tools and can discover additional specialized tools as needed.
+The current UTC datetime is: {current_utc_time}.
 </instructions>
 
 <capabilities>
@@ -171,8 +174,9 @@ How to use intelligent_tool_finder:
 
 Example workflow:
 1. Discover a tool: result = intelligent_tool_finder("weather forecast")
-2. The result provides details about a weather_forecast tool on the "weather-server" MCP server
-3. Use invoke_mcp_tool to call it: invoke_mcp_tool("https://registry-url.com/mcpgw/sse", "weather-server", "weather_forecast", {"location": "New York", "days": 5})
+2. The result provides details about a weather_forecast tool on the "weather-server" MCP server.
+3. Always use the "service_path" path field for the server name while creating the arguments for the invoke_mcp_tool in the next step.
+4. Use invoke_mcp_tool to call it: invoke_mcp_tool("https://registry-url.com/mcpgw/sse", "/weather", "weather_forecast", {"location": "New York", "days": 5})
 </tool_discovery>
 
 <workflow>
@@ -192,30 +196,54 @@ Prioritize security and privacy. Never use tools to access, generate, or share h
 
 def print_agent_response(response_dict: Dict[str, Any]) -> None:
     """
-    Parse and print all messages in the response
+    Parse and print all messages in the response with color coding
 
     Args:
         response_dict: Dictionary containing the agent response with 'messages' key
     """
+    # Define ANSI color codes for different message types
+    COLORS = {
+        "SYSTEM": "\033[1;33m",  # Yellow
+        "HUMAN": "\033[1;32m",   # Green
+        "AI": "\033[1;36m",      # Cyan
+        "TOOL": "\033[1;35m",    # Magenta
+        "UNKNOWN": "\033[1;37m", # White
+        "RESET": "\033[0m"       # Reset to default
+    }
     if 'messages' not in response_dict:
         print("No messages found in response")
         return
     
     messages = response_dict['messages']
-    print(f"\n=== Found {len(messages)} messages ===\n")
+    blue = "\033[1;34m"  # Blue
+    reset = COLORS["RESET"]
+    print(f"\n{blue}=== Found {len(messages)} messages ==={reset}\n")
     
     for i, message in enumerate(messages, 1):
-        # Determine message type
-        if "SystemMessage" in str(message):
+        # Determine message type based on class name or type
+        message_type = type(message).__name__
+        
+        if "SystemMessage" in message_type:
             msg_type = "SYSTEM"
-        elif "HumanMessage" in str(message):
+        elif "HumanMessage" in message_type:
             msg_type = "HUMAN"
-        elif "AIMessage" in str(message):
+        elif "AIMessage" in message_type:
             msg_type = "AI"
-        elif "ToolMessage" in str(message):
+        elif "ToolMessage" in message_type:
             msg_type = "TOOL"
         else:
-            msg_type = "UNKNOWN"
+            # Fallback to string matching if type name doesn't match expected patterns
+            message_str = str(message)
+            if "SystemMessage" in message_str:
+                msg_type = "SYSTEM"
+            elif "HumanMessage" in message_str:
+                msg_type = "HUMAN"
+            elif "AIMessage" in message_str:
+                msg_type = "AI"
+            elif "ToolMessage" in message_str:
+                msg_type = "TOOL"
+            else:
+                msg_type = "UNKNOWN"
         
         # Get message content
         content = message.content if hasattr(message, 'content') else str(message)
@@ -228,17 +256,21 @@ def print_agent_response(response_dict: Dict[str, Any]) -> None:
                 tool_args = tool_call.get('args', {})
                 tool_calls.append(f"Tool: {tool_name}, Args: {tool_args}")
         
-        # Print message with formatting
-        print(f"MESSAGE #{i} - TYPE: {msg_type}")
-        print("-" * 80)
+        # Get the color for this message type
+        color = COLORS.get(msg_type, COLORS["UNKNOWN"])
+        reset = COLORS["RESET"]
+        
+        # Print message with enhanced formatting and color coding - entire message in color
+        print(f"\n{color}{'=' * 20} MESSAGE #{i} - TYPE: {msg_type} {'=' * 20}")
+        print(f"{'-' * 80}")
         print(f"CONTENT: {content}")
         
         # Print any tool calls
         if tool_calls:
-            print("\nTOOL CALLS:")
+            print(f"\nTOOL CALLS:")
             for tc in tool_calls:
                 print(f"  {tc}")
-        print("=" * 80)
+        print(f"{'=' * 20} END OF {msg_type} MESSAGE #{i} {'=' * 20}{reset}")
         print()
 
 async def main():
@@ -260,7 +292,7 @@ async def main():
     print(f"Message: {args.message}")
     
     # Initialize the model
-    model = ChatBedrock(model_id=args.model, region_name='us-east-1')
+    model = ChatBedrockConverse(model_id=args.model, region_name='us-east-1')
     
     try:
         # Initialize MCP client with the server configuration
