@@ -122,6 +122,7 @@ async def invoke_mcp_tool(mcp_registry_url: str, server_name: str, tool_name: st
     
     # Create the server URL by joining the base URL with the server name and sse path
     server_url = urljoin(base_url, f"{server_name}/sse")
+    print(f"Server URL: {server_url}")
     
     try:
         # Create an MCP SSE client and call the tool
@@ -144,10 +145,13 @@ async def invoke_mcp_tool(mcp_registry_url: str, server_name: str, tool_name: st
 
 from datetime import datetime
 current_utc_time = str(datetime.utcnow())
-SYSTEM_PROMPT = """
+SYSTEM_PROMPT = f"""
 <instructions>
 You are a highly capable AI assistant designed to solve a wide range of problems for users. You have access to a variety of built-in tools and can discover additional specialized tools as needed.
-The current UTC datetime is: {current_utc_time}.
+
+If there is a user question that requires understanding of the current time to answer it, for example
+it needs to determine a date range then remember that you know the current UTC datetime is {current_utc_time}
+and determine the date range based on that.
 </instructions>
 
 <capabilities>
@@ -176,7 +180,7 @@ Example workflow:
 1. Discover a tool: result = intelligent_tool_finder("weather forecast")
 2. The result provides details about a weather_forecast tool on the "weather-server" MCP server.
 3. Always use the "service_path" path field for the server name while creating the arguments for the invoke_mcp_tool in the next step.
-4. Use invoke_mcp_tool to call it: invoke_mcp_tool("https://registry-url.com/mcpgw/sse", "/weather", "weather_forecast", {"location": "New York", "days": 5})
+4. Use invoke_mcp_tool to call it: invoke_mcp_tool("https://registry-url.com/mcpgw/sse", "/weather", "weather_forecast", {{"location": "New York", "days": 5}})
 </tool_discovery>
 
 <workflow>
