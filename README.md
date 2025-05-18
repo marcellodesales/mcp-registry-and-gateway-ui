@@ -9,22 +9,22 @@
 
 # MCP Gateway & Registry
 
-[Model Context Protocol (MCP)](https://modelcontextprotocol.io/introduction) is an open standard protocol that allows AI Models to connect with external systems, tools, and data sources. Two important pain points for enterprises that this gateway and registry solution addresses are the following:
+[Model Context Protocol (MCP)](https://modelcontextprotocol.io/introduction) is an open standard protocol that allows AI Models to connect with external systems, tools, and data sources. While MCP simplifies tool access for LLMs and solves data access and internal/external API connectivity challenges, several critical obstacles remain before enterprises can fully realize MCP's promise.
 
-- How do Agent developers know which MCP servers are accessible to them (typically enterprises would want to provide a curated list of MCP servers).
-- Enterprises need a common access point (gateway) to provide governed access to a curated list of MCP servers.
-- How do Agent developers determine which MCP tools to provide to their Agents to accomplish the task they are designing their Agent for. There may be hundreds of MCP servers available enterprise wide, but developers need an MCP Registry to determine a list of relevant server and then identify specific tools of interest from the servers to add to their Agent.
-- When presented a task for which it does not have a relevant tool how does an Agent dynamically discover tools from the list of servers available to it and then use those tools as needed.
+**Discovery & Access Challenges:**
+- **Service Discovery**: How do developers find and access approved MCP servers?
+- **Governed Access**: How do enterprises provide secure, centralized access to curated MCP servers?
+- **Tool Selection**: With hundreds of enterprise MCP servers, how do developers identify the right tools for their specific agents?
+- **Dynamic Discovery**: How can agents dynamically find and use new tools for tasks they weren't originally designed for?
 
-The MCP Gateway and Registry provides a solution to all of these above mentioned pain points. The Registry provides both a visual interface to a list of MCP servers and the Gateway provides governed access to the MCP servers. Agent developers can programatically determine which tools they should add to their Agents and finally Agents themselves can discover (via the MCP Registry) tools that can help them accomplish a task and then execute those tools even though the tool was not a part of the Agent when the Agent was created.
+The MCP Gateway & Registry solves these challenges by providing a unified platform that combines centralized access control with intelligent tool discovery. The Registry offers both visual and programmatic interfaces for exploring available MCP servers and tools, while the Gateway ensures secure, governed access to all services. This enables developers to programmatically build smarter agents and allows agents to autonomously discover and execute tools beyond their initial capabilities.
 
 | Resource | Link |
 |----------|------|
 | **Demo Video** | [An open-source MCP Gateway and Registry](https://www.youtube.com/watch?v=o_Wich7AChk) |
 | **Medium Post** | [Taming the Chaos: How the MCP Gateway Centralizes Your AI Model's Tools](https://medium.com/@amiarora/taming-the-chaos-how-the-mcp-gateway-centralizes-your-ai-models-tools-3dde64fc9a59) |
 
-You can run the gateway and registry either on an Amazon EC2 instance or on Amazon EKS for production deployments. Jump to the [installation](#installation) section for EC2 installs and the 
-
+You can deploy the gateway and registry on Amazon EC2 or Amazon EKS for production environments. Jump to [installation on EC2](#installation-on-ec2) or [installation on EKS](#installation-on-eks) for deployment instructions.
 ## Architecture
 
 The Gateway works by using an [Nginx server](https://docs.nginx.com/nginx/admin-guide/web-server/reverse-proxy/) as a reverse proxy, where each MCP server is handled as a different _path_ and the Nginx reverse proxy sitting between the MCP clients (contained in AI Agents for example) and backend server forwards client requests to appropriate backend servers and returns the responses back to clients. The requested resources are then returned to the client.
