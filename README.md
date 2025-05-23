@@ -21,7 +21,7 @@ The MCP Gateway & Registry solves these challenges by providing a unified platfo
 
 | Resource | Link |
 |----------|------|
-| **Demo Video** | [An open-source MCP Gateway and Registry](https://www.youtube.com/watch?v=o_Wich7AChk) |
+| **Demo Video** | [An open-source MCP Gateway and Registry](https://www.youtube.com/watch?v=o_Wich7AChk), [Dynamic tool discovery & invocation](https://www.youtube.com/watch?v=ZXU8f6NwgE4) |
 | **Medium Post** | [Taming the Chaos: How the MCP Gateway Centralizes Your AI Model's Tools](https://medium.com/@amiarora/taming-the-chaos-how-the-mcp-gateway-centralizes-your-ai-models-tools-3dde64fc9a59) |
 
 You can deploy the gateway and registry on Amazon EC2 or Amazon EKS for production environments. Jump to [installation on EC2](#installation-on-ec2) or [installation on EKS](#installation-on-eks) for deployment instructions.
