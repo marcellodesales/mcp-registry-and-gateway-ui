@@ -339,6 +339,5 @@ See the full API spec [here](docs/registry_api.md).
 1. Add option to deploy MCP servers.
 
 ## License
+This library is licensed under the MIT-0 License. See the [LICENSE](./LICENSE) file.
 
-- Free for non-commercial use under AGPL-3.0
-- Commercial use requires a paid license
