@@ -2281,7 +2281,7 @@ async def websocket_endpoint(websocket: WebSocket):
 #     uvicorn.run(app, host="0.0.0.0", port=7860)
 
 # OAuth callback endpoint
-@app.get("/oauth/callback")
+@app.get("/oauth/callback/")
 async def oauth_callback(
     code: str = None,
     state: str = None,

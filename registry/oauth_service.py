@@ -29,7 +29,7 @@ class OAuthConfig:
     client_secret: Optional[str] = None
     authorization_url: str = ""
     token_url: str = ""
-    redirect_uri: str = "http://localhost/oauth/callback"
+    redirect_uri: str = "http://localhost:7860/oauth/callback/"
     scope: str = "read"
     grant_type: str = "client_credentials"  # or "authorization_code"
     
@@ -591,7 +591,7 @@ class OAuthManager:
             RuntimeError: If registration fails
         """
         if redirect_uris is None:
-            redirect_uris = ["http://localhost/oauth/callback"]
+            redirect_uris = ["http://localhost:7860/oauth/callback/"]
         
         if grant_types is None:
             grant_types = ["authorization_code", "refresh_token"]
