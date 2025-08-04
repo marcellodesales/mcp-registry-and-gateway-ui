@@ -4,6 +4,8 @@ import secrets
 import asyncio
 import subprocess
 import httpx
+import logging
+from urllib.parse import urlparse
 # argparse removed as we're using environment variables instead
 from contextlib import asynccontextmanager
 from pathlib import Path  # Import Path
@@ -35,7 +37,6 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from itsdangerous import URLSafeTimedSerializer, SignatureExpired, BadSignature
 from dotenv import load_dotenv
-import logging
 
 # --- MCP Client Imports --- START
 from mcp import ClientSession
@@ -372,6 +373,29 @@ LOCATION_BLOCK_TEMPLATE = """
     }}
 """
 
+HTTPS_LOCATION_BLOCK_TEMPLATE = """
+    location {path}/ {{
+        proxy_pass {proxy_pass_url}/;
+        proxy_http_version 1.1;
+        
+        # HTTPS upstream SSL configuration
+        proxy_ssl_verify on;
+        proxy_ssl_trusted_certificate /etc/ssl/certs/ca-certificates.crt;
+        proxy_ssl_protocols TLSv1.2 TLSv1.3;
+        proxy_ssl_server_name on;
+        proxy_ssl_name {upstream_host};
+        
+        # Proxy headers - use actual upstream hostname for Host
+        proxy_set_header Host {upstream_host};
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        
+        # OAuth token forwarding (if available)
+        {auth_headers}
+    }}
+"""
+
 COMMENTED_LOCATION_BLOCK_TEMPLATE = """
 #    location {path}/ {{
 #        proxy_pass {proxy_pass_url};
@@ -382,6 +406,57 @@ COMMENTED_LOCATION_BLOCK_TEMPLATE = """
 #        proxy_set_header X-Forwarded-Proto $scheme;
 #    }}
 """
+
+COMMENTED_HTTPS_LOCATION_BLOCK_TEMPLATE = """
+#    location {path}/ {{
+#        proxy_pass {proxy_pass_url}/;
+#        proxy_http_version 1.1;
+#        
+#        # HTTPS upstream SSL configuration
+#        proxy_ssl_verify on;
+#        proxy_ssl_trusted_certificate /etc/ssl/certs/ca-certificates.crt;
+#        proxy_ssl_protocols TLSv1.2 TLSv1.3;
+#        proxy_ssl_server_name on;
+#        proxy_ssl_name {upstream_host};
+#        
+#        # Proxy headers - use actual upstream hostname for Host
+#        proxy_set_header Host {upstream_host};
+#        proxy_set_header X-Real-IP $remote_addr;
+#        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+#        proxy_set_header X-Forwarded-Proto $scheme;
+#        
+#        # OAuth token forwarding (if available)
+#        {auth_headers}
+#    }}
+"""
+
+def extract_upstream_host(proxy_url: str) -> str:
+    """Extract the hostname from a proxy URL for SNI configuration."""
+    parsed = urlparse(proxy_url)
+    return parsed.hostname or "localhost"
+
+def generate_auth_headers_for_nginx(server_path: str) -> str:
+    """Generate nginx proxy_set_header directives for OAuth authentication."""
+    if not oauth_manager.has_oauth_config(server_path):
+        return "# No OAuth configuration"
+    
+    try:
+        # Get auth headers from OAuth manager
+        auth_headers = oauth_manager.get_auth_headers(server_path)
+        if not auth_headers:
+            return "# OAuth configured but no valid token"
+        
+        # Convert to nginx proxy_set_header directives
+        nginx_headers = []
+        for header_name, header_value in auth_headers.items():
+            # Escape any special characters in the header value
+            escaped_value = header_value.replace('"', '\\"')
+            nginx_headers.append(f'        proxy_set_header {header_name} "{escaped_value}";')
+        
+        return "\n".join(nginx_headers)
+    except Exception as e:
+        logger.warning(f"Failed to generate auth headers for {server_path}: {e}")
+        return "# OAuth configured but error generating headers"
 
 def regenerate_nginx_config():
     """Generates the nginx config file based on registered servers and their state."""
@@ -410,10 +485,33 @@ def regenerate_nginx_config():
                 logger.warning(f"Skipping server '{server_info['server_name']}' ({path}) - missing proxy_pass_url.")
                 continue
 
+            # Determine if this is an HTTPS upstream
+            is_https = proxy_url.startswith("https://")
+            upstream_host = extract_upstream_host(proxy_url) if is_https else ""
+            auth_headers = generate_auth_headers_for_nginx(path) if is_https else ""
+
+            # Choose the appropriate template based on status and protocol
             if is_enabled and health_status == "healthy":
-                block = LOCATION_BLOCK_TEMPLATE.format(path=path, proxy_pass_url=proxy_url)
+                if is_https:
+                    block = HTTPS_LOCATION_BLOCK_TEMPLATE.format(
+                        path=path, 
+                        proxy_pass_url=proxy_url,
+                        upstream_host=upstream_host,
+                        auth_headers=auth_headers
+                    )
+                else:
+                    block = LOCATION_BLOCK_TEMPLATE.format(path=path, proxy_pass_url=proxy_url)
             else:
-                block = COMMENTED_LOCATION_BLOCK_TEMPLATE.format(path=path, proxy_pass_url=proxy_url)
+                if is_https:
+                    block = COMMENTED_HTTPS_LOCATION_BLOCK_TEMPLATE.format(
+                        path=path, 
+                        proxy_pass_url=proxy_url,
+                        upstream_host=upstream_host,
+                        auth_headers=auth_headers
+                    )
+                else:
+                    block = COMMENTED_LOCATION_BLOCK_TEMPLATE.format(path=path, proxy_pass_url=proxy_url)
+            
             location_blocks_content.append(block)
         
         generated_section = "\n".join(location_blocks_content).strip()
