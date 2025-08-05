@@ -742,6 +742,56 @@ def save_server_to_file(server_info):
         return False
 
 
+# --- Helper function to generate description from schema --- START
+def generate_description_from_schema(tool_name: str, tool_schema: dict) -> dict:
+    """Generate a meaningful description from the tool schema when no description is available"""
+    parsed_desc = {
+        "main": "No description available.",
+        "args": None,
+        "returns": None,
+        "raises": None,
+    }
+    
+    if not tool_schema or not isinstance(tool_schema, dict):
+        return parsed_desc
+    
+    properties = tool_schema.get("properties", {})
+    required = tool_schema.get("required", [])
+    
+    if properties:
+        # Generate main description
+        param_count = len(properties)
+        required_count = len(required)
+        
+        if param_count > 0:
+            main_desc_parts = [f"Tool that accepts {param_count} parameter{'s' if param_count != 1 else ''}"]
+            if required_count > 0:
+                main_desc_parts.append(f"({required_count} required)")
+            parsed_desc["main"] = " ".join(main_desc_parts) + "."
+        
+        # Generate args description from schema properties
+        args_parts = []
+        for prop_name, prop_info in properties.items():
+            prop_desc = prop_info.get("description", "")
+            prop_type = prop_info.get("type", "")
+            is_required = prop_name in required
+            
+            arg_line = f"- {prop_name}"
+            if prop_type:
+                arg_line += f" ({prop_type})"
+            if is_required:
+                arg_line += " [required]"
+            if prop_desc:
+                arg_line += f": {prop_desc}"
+            
+            args_parts.append(arg_line)
+        
+        if args_parts:
+            parsed_desc["args"] = "\n".join(args_parts)
+    
+    return parsed_desc
+# --- Helper function to generate description from schema --- END
+
 # --- MCP Client Function to Get Tool List --- START (Renamed)
 async def get_tools_from_server(base_url: str, server_path: str = None) -> List[dict] | None:
     """
@@ -797,6 +847,9 @@ async def get_tools_from_server(base_url: str, server_path: str = None) -> List[
                             "returns": None,
                             "raises": None,
                         }
+                        
+                        # Try to get tool-level description first
+                        has_tool_description = False
                         if tool_desc:
                             tool_desc = tool_desc.strip()
                             lines = tool_desc.split('\n')
@@ -836,10 +889,17 @@ async def get_tools_from_server(base_url: str, server_path: str = None) -> List[
 
                             if not parsed_desc["main"] and (parsed_desc["args"] or parsed_desc["returns"] or parsed_desc["raises"]):
                                 parsed_desc["main"] = "(No primary description provided)"
-                        else:
-                            parsed_desc["main"] = "No description available."
+                            
+                            # Check if we actually got a meaningful description
+                            if parsed_desc["main"] and parsed_desc["main"] != "No description available.":
+                                has_tool_description = True
 
                         tool_schema = getattr(tool, 'inputSchema', {})
+                        
+                        # If no meaningful tool description was found, generate from schema
+                        if not has_tool_description and tool_schema:
+                            logger.info(f"No tool description found for {tool_name}, generating from schema...")
+                            parsed_desc = generate_description_from_schema(tool_name, tool_schema)
 
                         tool_details_list.append({
                             "name": tool_name,
