@@ -2038,6 +2038,37 @@ async def get_service_tools(
 # --- Endpoint to get tool list for a service --- END
 
 
+# --- Endpoint to get server enabled status --- START
+@app.get("/api/status/{service_path:path}")
+async def get_server_status(
+    service_path: str,
+    username: Annotated[str, Depends(api_auth)]
+):
+    """Get enabled status for a specific server or all servers if service_path is 'all'"""
+    if not service_path.startswith('/'):
+        service_path = '/' + service_path
+
+    # Handle special case for '/all' to return status for all servers
+    if service_path == '/all':
+        status_info = {}
+        for path in REGISTERED_SERVERS.keys():
+            is_enabled = MOCK_SERVICE_STATE.get(path, False)
+            status_info[path] = "on" if is_enabled else "off"
+        
+        return {"servers": status_info}
+
+    # Handle specific server case
+    if service_path not in REGISTERED_SERVERS:
+        raise HTTPException(status_code=404, detail="Service path not registered")
+    
+    is_enabled = MOCK_SERVICE_STATE.get(service_path, False)
+    return {
+        "service_path": service_path,
+        "status": "on" if is_enabled else "off"
+    }
+# --- Endpoint to get server enabled status --- END
+
+
 # --- Refresh Endpoint --- START
 @app.post("/api/refresh/{service_path:path}")
 async def refresh_service(service_path: str, username: Annotated[str, Depends(api_auth)]):
