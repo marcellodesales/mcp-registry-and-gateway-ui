@@ -20,6 +20,7 @@ on:
       - bugfix/**
       - hotfix/**
       - main
+      - codex/**
 
     tags:
       - "v*"
