@@ -9,8 +9,7 @@ import argparse
 import logging
 from pydantic import BaseModel, Field
 from mcp.server.fastmcp import FastMCP
-from typing import Dict, Any, Optional, ClassVar, Annotated
-from pydantic import validator
+from typing import Annotated, Any, ClassVar, Dict, Optional
 from dotenv import load_dotenv
 
 # Configure logging

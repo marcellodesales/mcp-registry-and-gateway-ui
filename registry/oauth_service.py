@@ -1,4 +1,3 @@
-import asyncio
 import secrets
 import hashlib
 import base64
@@ -6,7 +5,7 @@ import httpx
 import json
 from datetime import datetime, timedelta
 from typing import Dict, Any, Optional, List
-from urllib.parse import urlencode, parse_qs, urlparse, urljoin
+from urllib.parse import urlencode, urljoin
 from dataclasses import dataclass, asdict
 import logging
 
@@ -75,7 +74,6 @@ class OAuthDiscovery:
         
         # Normalize base URL
         base_url = base_url.rstrip('/')
-        parsed_url = urlparse(base_url)
         
         discovered_endpoints = {}
         
@@ -184,7 +182,7 @@ class OAuthDiscovery:
                                 discovered_endpoints['authorization_url'] = auth_url
                                 logger.info(f"Found OAuth endpoints via pattern matching: token={token_url}, auth={auth_url}")
                                 return discovered_endpoints
-                    except:
+                    except Exception:
                         # OPTIONS failed, try HEAD
                         response = await client.head(token_url)
                         if response.status_code in [200, 405]:  # 405 is OK - means endpoint exists but doesn't support HEAD
@@ -297,7 +295,7 @@ class OAuthManager:
         
         config = self._configs[server_path]
         if config.grant_type != "authorization_code":
-            raise ValueError(f"Authorization URL only applicable for authorization_code flow")
+            raise ValueError("Authorization URL only applicable for authorization_code flow")
         
         # Generate state and PKCE parameters
         state = secrets.token_urlsafe(32)
@@ -702,7 +700,7 @@ class OAuthManager:
                             registration_endpoint = potential_endpoint
                             logger.info(f"Found potential registration endpoint: {registration_endpoint}")
                             break
-                except:
+                except Exception:
                     continue
         
         if not registration_endpoint:
