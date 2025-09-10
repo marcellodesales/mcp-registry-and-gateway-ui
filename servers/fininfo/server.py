@@ -1,5 +1,5 @@
 """
-This server provides stoack market data using the Polygon.io API.
+This server provides stock market data using the Polygon.io API.
 """
 
 import os

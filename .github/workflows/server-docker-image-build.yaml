@@ -1,0 +1,67 @@
+####
+#### Author: Marcello DeSales (@mdesales)
+####
+name: server-docker-image-build
+
+on:
+  pull_request:
+    types: [closed]
+    branches:
+      # DEV environment: integration work from all devs is mapped to develop branch
+      - develop
+      # STG environment is mapped to master
+      - main
+
+  push:
+    branches:
+      - dependabot/**
+      - develop
+      - feature/**
+      - bugfix/**
+      - hotfix/**
+      - main
+
+    tags:
+      - "v*"
+
+    paths:
+      - ".github/workflows/server-docker-image-build.yaml"
+      - "servers/**"
+      - "registers/**"
+      - ".dockerignore"
+      - ".gitignore/**"
+      - "docker-compose*"
+      - "**Dockerfile**"
+
+jobs:
+  docker-devsecops:
+    name: 🐳 docker
+    uses: marcellodesales/vionix/.github/workflows/workflow-build-docker-image.yaml@oss/main-image-container
+    with:
+      github-actions-runner: ubuntu-latest
+      docker-compose-context: .
+      docker-compose-file: docker-compose.yaml
+      docker-compose-service: mcp-gateway
+      check-fail-on-yaml-json-lint-error: false
+      check-allow-multiple-yaml-documents: true
+      docker-submit-sbom: true
+    secrets:
+      # Docker registry username defaults to the reponame for dockerhub authentication, established in docker-compose.yaml
+      DOCKER_REGISTRY_USER: ${{ secrets.DOCKER_REGISTRY_USER }}
+      DOCKER_REGISTRY_PASS: ${{ secrets.DOCKER_REGISTRY_PASS }}
+    permissions:
+      # Actions values
+      actions: read
+      # Authenticated GITHUB_TOKENS to clone repo
+      id-token: write
+      contents: write
+      # Set the deployment once the image is pushed
+      deployments: write
+      # Write comments to Pull Requests
+      pull-requests: write
+      # Submit security events
+      security-events: read
+      # Submit attestations: https://docs.docker.com/build/metadata/attestations/#attestation-manifest-format
+      # This is only available for public repos https://docs.github.com/en/rest/repos/repos#create-an-attestation
+      attestations: write
+      packages: write

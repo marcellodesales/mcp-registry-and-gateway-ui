@@ -70,7 +70,7 @@ if [ ! -d "$VENV_DIR" ] || [ ! -f "$VENV_DIR/bin/activate" ]; then
   
   # Create virtual environment
   echo "Creating virtual environment..."
-  uv venv "$VENV_DIR" --python 3.12
+  uv venv "$VENV_DIR" --python 3.13
   
   # Install dependencies
   echo "Installing Python dependencies..."

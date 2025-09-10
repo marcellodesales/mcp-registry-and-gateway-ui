@@ -1,0 +1,29 @@
+services:
+  mcp-gateway:
+    image: marcellodesales/mcp-registry-and-gateway-ui
+    platform: linux/amd64
+    build:
+      context: .
+    container_name: mcp-gateway-container
+    ports:
+      - "80:80"
+      - "443:443"
+      - "7860:7860"
+    environment:
+      - ADMIN_USER=${ADMIN_USER}
+      - ADMIN_PASSWORD=${ADMIN_PASSWORD}
+      - POLYGON_API_KEY=${POLYGON_API_KEY}
+      - SECRET_KEY=${SECRET_KEY:-}
+    volumes:
+      - ./config/certs:/etc/ssl/certs
+      - ./config/private:/etc/ssl/private
+      - ./data/logs:/app/logs
+      - ./data/servers:/app/registry/servers
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:80/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
