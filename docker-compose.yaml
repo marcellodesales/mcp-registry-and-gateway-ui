@@ -1,8 +1,9 @@
-version: '3.8'
-
 services:
   mcp-gateway:
     image: marcellodesales/mcp-gateway-ui
+    platform: linux/amd64
+    build:
+      context: .
     container_name: mcp-gateway-container
     ports:
       - "80:80"
@@ -14,11 +15,11 @@ services:
       - POLYGON_API_KEY=${POLYGON_API_KEY}
       - SECRET_KEY=${SECRET_KEY:-}
     volumes:
-      - /path/to/certs:/etc/ssl/certs
-      - /path/to/private:/etc/ssl/private
-      - /var/log/mcp-gateway:/app/logs
-      - /opt/mcp-gateway/servers:/app/registry/servers
-    restart: unless-stopped
+      - ./config/certs:/etc/ssl/certs
+      - ./config/private:/etc/ssl/private
+      - ./data/logs:/app/logs
+      - ./data/servers:/app/registry/servers
+    #restart: unless-stopped
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:80/health"]
       interval: 30s
