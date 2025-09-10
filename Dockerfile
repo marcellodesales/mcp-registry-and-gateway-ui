@@ -1,5 +1,5 @@
 # Use an official Python runtime as a parent image
-FROM python:3.12-slim
+FROM python:3.13-slim
 
 # Set environment variables to prevent interactive prompts during installation
 ENV PYTHONUNBUFFERED=1 \
@@ -35,18 +35,6 @@ RUN chmod +x /app/docker/entrypoint.sh
 
 # Expose ports for Nginx (HTTP/HTTPS) and the Registry (direct access, though usually proxied)
 EXPOSE 80 443 7860
-
-# Define environment variables for registry/server configuration (can be overridden at runtime)
-# Provide sensible defaults or leave empty if they should be explicitly set
-ARG SECRET_KEY=""
-ARG ADMIN_USER="admin"
-ARG ADMIN_PASSWORD=""
-ARG POLYGON_API_KEY=""
-
-ENV SECRET_KEY=$SECRET_KEY
-ENV ADMIN_USER=$ADMIN_USER
-ENV ADMIN_PASSWORD=$ADMIN_PASSWORD
-ENV POLYGON_API_KEY=$POLYGON_API_KEY
 
 # Run the entrypoint script when the container launches
 ENTRYPOINT ["/app/docker/entrypoint.sh"]
