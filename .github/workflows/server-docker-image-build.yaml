@@ -5,34 +5,25 @@ name: server-docker-image-build
 
 on:
   pull_request:
-    types: [closed]
+    types: [opened, reopened, synchronize, closed]
     branches:
-      # DEV environment: integration work from all devs is mapped to develop branch
+      # Long-term gitflow branches
       - develop
-      # STG environment is mapped to master
       - main
 
-  push:
-    branches:
-      - dependabot/**
-      - develop
+      # Short-term gitflow branches
       - feature/**
       - bugfix/**
       - hotfix/**
-      - main
+
+      # the list of AI-created branches
+      - dependabot/**
       - codex/**
 
+  push:
     tags:
+      # Releases could have the build of the image
       - "v*"
-
-    paths:
-      - ".github/workflows/server-docker-image-build.yaml"
-      - "servers/**"
-      - "registers/**"
-      - ".dockerignore"
-      - ".gitignore/**"
-      - "docker-compose*"
-      - "**Dockerfile**"
 
 jobs:
   docker-devsecops:
