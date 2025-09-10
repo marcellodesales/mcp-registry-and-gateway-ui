@@ -21,13 +21,14 @@ Example:
 import asyncio
 import argparse
 import re
-from typing import Dict, List, Any, Optional
-from urllib.parse import urlparse, urljoin
+from datetime import datetime
+from typing import Any, Dict
+from urllib.parse import urljoin, urlparse
+
+from langchain_aws import ChatBedrockConverse
+from langchain_core.tools import tool
 from langchain_mcp_adapters.client import MultiServerMCPClient
 from langgraph.prebuilt import create_react_agent
-from langchain_aws import ChatBedrock, ChatBedrockConverse
-from langchain_core.tools import tool
-import mcp
 from mcp import ClientSession
 from mcp.client.sse import sse_client
 
@@ -126,8 +127,8 @@ async def invoke_mcp_tool(mcp_registry_url: str, server_name: str, tool_name: st
     
     try:
         # Create an MCP SSE client and call the tool
-        async with mcp.client.sse.sse_client(server_url) as (read, write):
-            async with mcp.ClientSession(read, write, sampling_callback=None) as session:
+        async with sse_client(server_url) as (read, write):
+            async with ClientSession(read, write, sampling_callback=None) as session:
                 # Initialize the connection
                 await session.initialize()
                 
@@ -143,7 +144,6 @@ async def invoke_mcp_tool(mcp_registry_url: str, server_name: str, tool_name: st
     except Exception as e:
         return f"Error invoking MCP tool: {str(e)}"
 
-from datetime import datetime
 current_utc_time = str(datetime.utcnow())
 SYSTEM_PROMPT = f"""
 <instructions>
@@ -271,7 +271,7 @@ def print_agent_response(response_dict: Dict[str, Any]) -> None:
         
         # Print any tool calls
         if tool_calls:
-            print(f"\nTOOL CALLS:")
+            print("\nTOOL CALLS:")
             for tc in tool_calls:
                 print(f"  {tc}")
         print(f"{'=' * 20} END OF {msg_type} MESSAGE #{i} {'=' * 20}{reset}")

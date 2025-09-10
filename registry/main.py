@@ -5,43 +5,38 @@ import asyncio
 import subprocess
 import httpx
 import logging
-from urllib.parse import urlparse
-# argparse removed as we're using environment variables instead
 from contextlib import asynccontextmanager
+from datetime import datetime, timezone
 from pathlib import Path  # Import Path
 from typing import Annotated, List, Set
-from datetime import datetime, timezone
+from urllib.parse import urlparse
 
 import faiss
 import numpy as np
+from fastapi import (
+    Cookie,
+    Depends,
+    FastAPI,
+    Form,
+    HTTPException,
+    Request,
+    WebSocket,
+    WebSocketDisconnect,
+    status,
+)
+from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
+from fastapi.staticfiles import StaticFiles
+from fastapi.templating import Jinja2Templates
+from itsdangerous import BadSignature, SignatureExpired, URLSafeTimedSerializer
+from dotenv import load_dotenv
+from mcp import ClientSession
+from mcp.client.sse import sse_client
 from sentence_transformers import SentenceTransformer
-from registry.oauth_service import oauth_manager, OAuthConfig, OAuthDiscovery
+from registry.oauth_service import OAuthConfig, OAuthDiscovery, oauth_manager
 
 # Get configuration from environment variables
 EMBEDDINGS_MODEL_NAME = os.environ.get('EMBEDDINGS_MODEL_NAME', 'all-MiniLM-L6-v2')
 EMBEDDINGS_MODEL_DIMENSIONS = int(os.environ.get('EMBEDDINGS_MODEL_DIMENSIONS', '384'))
-
-from fastapi import (
-    FastAPI,
-    Request,
-    Depends,
-    HTTPException,
-    Form,
-    status,
-    Cookie,
-    WebSocket,
-    WebSocketDisconnect,
-)
-from fastapi.responses import HTMLResponse, RedirectResponse, JSONResponse
-from fastapi.staticfiles import StaticFiles
-from fastapi.templating import Jinja2Templates
-from itsdangerous import URLSafeTimedSerializer, SignatureExpired, BadSignature
-from dotenv import load_dotenv
-
-# --- MCP Client Imports --- START
-from mcp import ClientSession
-from mcp.client.sse import sse_client
-# --- MCP Client Imports --- END
 
 # --- Define paths based on container structure --- START
 CONTAINER_APP_DIR = Path("/app")
@@ -1777,7 +1772,7 @@ async def register_service(
                     
                     # Try dynamic registration first if supported
                     if oauth_capabilities["supports_dynamic_registration"]:
-                        logger.info(f"[AUTO-REGISTER] Attempting dynamic client registration...")
+                        logger.info("[AUTO-REGISTER] Attempting dynamic client registration...")
                         detection_info["dynamic_registration_attempted"] = True
                         
                         try:
@@ -1797,7 +1792,7 @@ async def register_service(
                     
                     # If dynamic registration failed or not supported, use .env credentials
                     if oauth_config is None:
-                        logger.info(f"[AUTO-REGISTER] Using .env CLIENT_ID and CLIENT_SECRET as fallback")
+                        logger.info("[AUTO-REGISTER] Using .env CLIENT_ID and CLIENT_SECRET as fallback")
                         detection_info["fallback_credentials_used"] = True
                         
                         try:
@@ -1875,7 +1870,7 @@ async def register_service(
         # Continue with non-OAuth registration
 
     # Step 6: Save server configuration
-    logger.info(f"[AUTO-REGISTER] Saving server configuration...")
+    logger.info("[AUTO-REGISTER] Saving server configuration...")
     success = save_server_to_file(server_entry)
     if not success:
         raise HTTPException(

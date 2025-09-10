@@ -3,14 +3,14 @@ This server provides an interface to get the current time in a specified timezon
 """
 
 import os
-import time
-import random
-import requests
 import argparse
 import logging
-from mcp.server.fastmcp import FastMCP
-from pydantic import BaseModel, Field
+from datetime import datetime
 from typing import Annotated
+
+import pytz
+from mcp.server.fastmcp import FastMCP
+from pydantic import Field
 
 # Configure logging
 logging.basicConfig(
@@ -73,10 +73,6 @@ The user's location is: {location}
 """
     return system_prompt
 
-
-
-from datetime import datetime
-import pytz
 
 def get_current_time_in_timezone(timezone_name):
     """
