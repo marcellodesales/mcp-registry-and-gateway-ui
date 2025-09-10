@@ -61,6 +61,7 @@ jobs:
       pull-requests: write
       # Submit security events
       security-events: read
-      # # Submit attestations: https://docs.docker.com/build/metadata/attestations/#attestation-manifest-format
+      # Submit attestations: https://docs.docker.com/build/metadata/attestations/#attestation-manifest-format
+      # This is only available for public repos https://docs.github.com/en/rest/repos/repos#create-an-attestation
       attestations: write
       packages: write
