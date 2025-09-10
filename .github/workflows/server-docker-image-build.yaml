@@ -53,7 +53,7 @@ jobs:
       github-actions-runner: ubuntu-latest
       docker-compose-context: .
       docker-compose-file: docker-compose.yaml
-      docker-compose-service: sorter
+      docker-compose-service: mcp-gateway
       check-fail-on-yaml-json-lint-error: false
       check-allow-multiple-yaml-documents: true
       docker-submit-sbom: true
