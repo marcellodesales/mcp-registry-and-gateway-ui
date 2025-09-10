@@ -36,17 +36,6 @@ on:
 jobs:
   docker-devsecops:
     name: 🐳 docker
-    permissions:
-      actions: read
-      contents: write
-      # Set the deployment once the image is pushed
-      deployments: write
-      # Write comments to Pull Requests
-      pull-requests: write
-      # Submit security events
-      security-events: read
-      # # Submit attestations: https://docs.docker.com/build/metadata/attestations/#attestation-manifest-format
-      # attestations: write
     uses: marcellodesales/vionix/.github/workflows/workflow-build-docker-image.yaml@oss/main-image-container
     with:
       github-actions-runner: ubuntu-latest
@@ -60,4 +49,16 @@ jobs:
       # Docker registry username defaults to the reponame for dockerhub authentication, established in docker-compose.yaml
       DOCKER_REGISTRY_USER: ${{ secrets.DOCKER_REGISTRY_USER }}
       DOCKER_REGISTRY_PASS: ${{ secrets.DOCKER_REGISTRY_PASS }}
-
+    permissions:
+      # Actions values
+      actions: read
+      # Authenticated GITHUB_TOKENS to clone repo
+      contents: write
+      # Set the deployment once the image is pushed
+      deployments: write
+      # Write comments to Pull Requests
+      pull-requests: write
+      # Submit security events
+      security-events: read
+      # # Submit attestations: https://docs.docker.com/build/metadata/attestations/#attestation-manifest-format
+      attestations: write
