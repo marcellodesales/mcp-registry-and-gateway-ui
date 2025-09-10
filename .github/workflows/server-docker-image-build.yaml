@@ -45,8 +45,8 @@ jobs:
       pull-requests: write
       # Submit security events
       security-events: read
-      # Submit attestations: https://docs.docker.com/build/metadata/attestations/#attestation-manifest-format
-      attestations: write
+      # # Submit attestations: https://docs.docker.com/build/metadata/attestations/#attestation-manifest-format
+      # attestations: write
     uses: marcellodesales/vionix/.github/workflows/workflow-build-docker-image.yaml@oss/main-image-container
     with:
       github-actions-runner: ubuntu-latest
