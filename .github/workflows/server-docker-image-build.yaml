@@ -1,0 +1,59 @@
+####
+#### Author: Marcello DeSales (@mdesales)
+####
+name: server-docker-image-build
+
+on:
+  pull_request:
+    types: [closed]
+    branches:
+      # DEV environment: integration work from all devs is mapped to develop branch
+      - develop
+      # STG environment is mapped to master
+      - main
+
+  push:
+    branches:
+      - dependabot/**
+      - develop
+      - feature/**
+      - bugfix/**
+      - hotfix/**
+      - main
+
+    tags:
+      - "v*"
+
+    paths:
+      - ".github/workflows/server-docker-image-build.yaml"
+      - "servers/**"
+      - "registers/**"
+      - ".dockerignore"
+      - ".gitignore/**"
+      - "docker-compose*"
+      - "**Dockerfile**"
+
+jobs:
+  docker-devsecops:
+    name: 🐳 docker
+
+    permissions:
+      actions: read
+      contents: write
+      deployments: write
+      pull-requests: write
+      security-events: read
+
+    uses: marcellodesales/vionix/.github/workflows/workflow-build-docker-image.yaml@oss/main-image-container
+    secrets:
+      # Docker registry username defaults to the reponame for dockerhub authentication, established in docker-compose.yaml
+      DOCKER_REGISTRY_USER: ${{ secrets.DOCKER_REGISTRY_USER }}
+      DOCKER_REGISTRY_PASS: ${{ secrets.DOCKER_REGISTRY_PASS }}
+    with:
+      github-actions-runner: ubuntu-latest
+      docker-compose-context: .
+      docker-compose-file: docker-compose.yaml
+      docker-compose-service: sorter
+      check-fail-on-yaml-json-lint-error: false
+      check-allow-multiple-yaml-documents: true
+      docker-submit-sbom: true
