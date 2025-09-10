@@ -63,3 +63,4 @@ jobs:
       security-events: read
       # # Submit attestations: https://docs.docker.com/build/metadata/attestations/#attestation-manifest-format
       attestations: write
+      packages: write
