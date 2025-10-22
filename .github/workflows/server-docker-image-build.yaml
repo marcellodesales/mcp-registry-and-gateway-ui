@@ -28,7 +28,7 @@ on:
 jobs:
   docker-devsecops:
     name: 🐳 docker
-    uses: marcellodesales/vionix/.github/workflows/workflow-build-docker-image.yaml@oss/main-image-container
+    uses: marcellodesales/vionix/.github/workflows/workflow-build-docker-image.yaml@oss/main
     with:
       github-actions-runner: ubuntu-latest
       docker-compose-context: .
