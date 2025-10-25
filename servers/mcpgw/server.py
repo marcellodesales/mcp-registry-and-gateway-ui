@@ -14,7 +14,6 @@ from pydantic import BaseModel, Field
 from mcp.server.fastmcp import FastMCP
 from typing import Dict, Any, Optional, ClassVar, List
 from dotenv import load_dotenv
-import os
 from sentence_transformers import SentenceTransformer # Added
 import numpy as np # Added
 from sklearn.metrics.pairwise import cosine_similarity # Added
@@ -124,7 +123,6 @@ async def load_faiss_data_for_mcpgw():
             _last_faiss_index_mtime = None
 
         # Check FAISS metadata file
-        metadata_file_changed = False
         if FAISS_METADATA_PATH_MCPGW.exists():
             try:
                 current_metadata_mtime = await asyncio.to_thread(os.path.getmtime, FAISS_METADATA_PATH_MCPGW)
@@ -134,7 +132,6 @@ async def load_faiss_data_for_mcpgw():
                         content = await asyncio.to_thread(f.read)
                         _faiss_metadata_mcpgw = await asyncio.to_thread(json.loads, content)
                     _last_faiss_metadata_mtime = current_metadata_mtime
-                    metadata_file_changed = True
                     logger.info(f"MCPGW: FAISS metadata loaded. Paths: {len(_faiss_metadata_mcpgw.get('metadata', {})) if _faiss_metadata_mcpgw else 'N/A'}")
                 else:
                     logger.debug("MCPGW: FAISS metadata file unchanged since last load.")
@@ -604,7 +601,7 @@ async def healthcheck() -> Dict[str, Any]:
     """
     try:
         # Connect to the WebSocket endpoint
-        registry_ws_url = f"ws://localhost:7860/ws/health_status"
+        registry_ws_url = "ws://localhost:7860/ws/health_status"
         logger.info(f"Connecting to WebSocket endpoint: {registry_ws_url}")
         
         async with websockets.connect(registry_ws_url) as websocket:
