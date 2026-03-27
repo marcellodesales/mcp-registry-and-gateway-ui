@@ -9,10 +9,10 @@ import secrets  # Replaced random with secrets
 import argparse
 import logging
 import json
-from datetime import datetime, timedelta
+from datetime import datetime
 from mcp.server.fastmcp import FastMCP
 from pydantic import BaseModel, Field
-from typing import Annotated, List, Dict, Optional, Union, Any
+from typing import Annotated, Any, Dict, List, Optional
 
 # Configure logging
 logging.basicConfig(
