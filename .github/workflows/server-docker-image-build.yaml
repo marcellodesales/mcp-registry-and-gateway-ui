@@ -28,7 +28,7 @@ on:
 jobs:
   docker-devsecops:
     name: 🐳 docker
-    uses: vionix-proj/github-platform/.github/workflows/workflow-build-docker-image.yaml@oss/main
+    uses: vionix-proj/github-platform/.github/workflows/docker-multiarch-cicd.yaml@main
     with:
       github-actions-runner: ubuntu-latest
       docker-compose-context: .
